@@ -1,0 +1,8 @@
+target/
+*.class
+*.jar
+.idea/
+*.iml
+.env
+*.env
+docker-data/

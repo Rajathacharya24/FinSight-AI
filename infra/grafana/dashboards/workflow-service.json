@@ -1,0 +1,59 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 0,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Workflow Executions (total)",
+      "datasource": "Prometheus",
+      "targets": [
+        {"expr": "sum(workflow_execute_seconds_count)", "refId": "A"}
+      ],
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0}
+    },
+    {
+      "type": "stat",
+      "title": "Avg Workflow Duration (s)",
+      "datasource": "Prometheus",
+      "targets": [
+        {"expr": "rate(workflow_execute_seconds_sum[5m]) / rate(workflow_execute_seconds_count[5m])", "refId": "A"}
+      ],
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0}
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP Request Rate",
+      "datasource": "Prometheus",
+      "targets": [
+        {"expr": "sum by (uri) (rate(http_server_requests_seconds_count{application=\"workflow-service\"}[1m]))", "refId": "A"}
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+    },
+    {
+      "type": "timeseries",
+      "title": "Workflow p95 Duration",
+      "datasource": "Prometheus",
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum(rate(workflow_execute_seconds_bucket[5m])) by (le))", "refId": "A"}
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+    },
+    {
+      "type": "timeseries",
+      "title": "JVM Memory Used",
+      "datasource": "Prometheus",
+      "targets": [
+        {"expr": "jvm_memory_used_bytes{application=\"workflow-service\"}", "refId": "A"}
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "tags": ["finsight"],
+  "time": {"from": "now-1h", "to": "now"},
+  "title": "FinSight Workflow Service",
+  "uid": "finsight-workflow",
+  "version": 1
+}

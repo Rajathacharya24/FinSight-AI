@@ -1,0 +1,42 @@
+server:
+  port: 8082
+
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/finsight_db?currentSchema=document
+    username: finsight_user
+    password: finsight_password
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    schemas: document
+    create-schema: true
+    locations: classpath:db/migration
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+  kafka:
+    bootstrap-servers: kafka:29092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.type.mapping: documentUploadedEvent:com.finsight.documentservice.event.DocumentUploadedEvent
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:replace-with-256-bit-base64-secret}
+    expirationMs: ${JWT_EXPIRATION_MS:3600000}
+  storage:
+    local-dir: /tmp/finsight-uploads

@@ -112,6 +112,7 @@ services:
       - "8888:8888"
     environment:
       SPRING_PROFILES_ACTIVE: native
+      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
       interval: 15s
@@ -125,6 +126,8 @@ services:
     container_name: finsight-discovery-server
     ports:
       - "8761:8761"
+    environment:
+      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
     depends_on:
       config-server:
         condition: service_healthy
@@ -141,6 +144,8 @@ services:
     container_name: finsight-api-gateway
     ports:
       - "8080:8080"
+    environment:
+      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
     depends_on:
       discovery-server:
         condition: service_healthy
@@ -156,12 +161,19 @@ services:
     ports:
       - "8081:8081"
     environment:
-      DB_HOST: postgres
+      DB_HOST: finsight-postgres
+      DB_NAME: finsight_db
+      DB_USER: finsight_user
+      DB_PASSWORD: finsight_password
+      CONFIG_SERVER_URL: http://config-server:8888
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       EUREKA_URL: http://discovery-server:8761/eureka
       ZIPKIN_URL: http://zipkin:9411/api/v2/spans
+      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
     depends_on:
       postgres:
+        condition: service_healthy
+      config-server:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
@@ -174,12 +186,19 @@ services:
     ports:
       - "8082:8082"
     environment:
-      DB_HOST: postgres
+      DB_HOST: finsight-postgres
+      DB_NAME: finsight_db
+      DB_USER: finsight_user
+      DB_PASSWORD: finsight_password
+      CONFIG_SERVER_URL: http://config-server:8888
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       EUREKA_URL: http://discovery-server:8761/eureka
       ZIPKIN_URL: http://zipkin:9411/api/v2/spans
+      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
     depends_on:
       postgres:
+        condition: service_healthy
+      config-server:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
@@ -192,15 +211,22 @@ services:
     ports:
       - "8083:8083"
     environment:
-      DB_HOST: postgres
+      DB_HOST: finsight-postgres
+      DB_NAME: finsight_db
+      DB_USER: finsight_user
+      DB_PASSWORD: finsight_password
+      CONFIG_SERVER_URL: http://config-server:8888
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       EUREKA_URL: http://discovery-server:8761/eureka
       ZIPKIN_URL: http://zipkin:9411/api/v2/spans
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
     depends_on:
       postgres:
+        condition: service_healthy
+      config-server:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
@@ -213,14 +239,21 @@ services:
     ports:
       - "8084:8084"
     environment:
-      DB_HOST: postgres
+      DB_HOST: finsight-postgres
+      DB_NAME: finsight_db
+      DB_USER: finsight_user
+      DB_PASSWORD: finsight_password
+      CONFIG_SERVER_URL: http://config-server:8888
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       EUREKA_URL: http://discovery-server:8761/eureka
       ZIPKIN_URL: http://zipkin:9411/api/v2/spans
       DOCUMENT_SERVICE_URL: http://document-service:8082
       AI_SERVICE_URL: http://ai-service:8083
+      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
     depends_on:
       postgres:
+        condition: service_healthy
+      config-server:
         condition: service_healthy
       discovery-server:
         condition: service_healthy

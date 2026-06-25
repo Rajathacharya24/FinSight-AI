@@ -1,0 +1,27 @@
+server:
+  port: 8086
+
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/finsight_db?currentSchema=dashboard
+    username: finsight_user
+    password: finsight_password
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    schemas: dashboard
+    create-schema: true
+    locations: classpath:db/migration
+
+  data:
+    redis:
+      host: redis
+      port: 6379

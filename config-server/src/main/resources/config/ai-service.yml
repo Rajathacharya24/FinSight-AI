@@ -18,11 +18,11 @@ spring:
 
   ai:
     openai:
-      api-key: ${OPENAI_API_KEY}
-      base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+      api-key: ${GROQ_API_KEY:${OPENAI_API_KEY:}}
+      base-url: ${GROQ_BASE_URL:${OPENAI_BASE_URL:https://api.groq.com/openai/v1}}
       chat:
         options:
-          model: ${OPENAI_MODEL:gpt-4o-mini}
+          model: ${GROQ_MODEL:${OPENAI_MODEL:llama3-8b-8192}}
           temperature: 0.1
 
   flyway:

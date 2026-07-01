@@ -9,7 +9,7 @@
 
 ```bash
 cp .env.example .env
-# edit secrets: OPENAI_API_KEY, JWT_SECRET, POSTGRES_PASSWORD
+# edit secrets: GROQ_API_KEY, JWT_SECRET, POSTGRES_PASSWORD
 ```
 
 ## 2. Build & run (Compose)

@@ -41,8 +41,7 @@ Upload  →  Extract  →  Validate  →  Recommend
 ## Quick start
 
 ```bash
-cp .env.example .env
-docker compose up -d --build
+./run.sh
 ```
 
 Then open:

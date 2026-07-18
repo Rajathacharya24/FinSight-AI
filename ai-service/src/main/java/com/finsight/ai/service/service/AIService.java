@@ -14,6 +14,14 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 
+import org.springframework.ai.document.Document;
+import org.springframework.ai.transformer.splitter.TokenTextSplitter;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -36,15 +44,36 @@ public class AIService {
     private final ChatClient chatClient;
     private final LoanApplicationExtractionRepository repository;
     private final ObjectMapper objectMapper;
+    private final VectorStore vectorStore;
 
     @Retryable(maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2.0))
     public ExtractionResponse extractAndPersist(Long documentId, String extractedText) {
         String text = extractedText == null ? "" : extractedText;
         log.info("Extracting from document {} ({} chars) using LLM", documentId, text.length());
 
+        // RAG Pipeline: 1. Split and Store
+        TokenTextSplitter splitter = new TokenTextSplitter();
+        List<Document> documents = splitter.split(List.of(new Document(text)));
+        documents.forEach(doc -> doc.getMetadata().put("documentId", documentId));
+        vectorStore.accept(documents);
+
+        // RAG Pipeline: 2. Retrieve
+        List<Document> relevantDocs = vectorStore.similaritySearch(
+            SearchRequest.query("loan applicant name address income amount")
+                         .withTopK(5)
+                         .withFilterExpression("documentId == " + documentId)
+        );
+
+        // Evaluate retrieval: log retrieved chunks
+        relevantDocs.forEach(doc -> log.debug("Retrieved chunk for doc {}: {}", documentId, doc.getContent()));
+
+        String ragText = relevantDocs.stream()
+                                     .map(Document::getContent)
+                                     .collect(Collectors.joining("\n"));
+
         String response = chatClient.prompt()
                 .system(s -> s.text("You are a loan application data extraction specialist. Return only valid JSON."))
-                .user(u -> u.text(EXTRACTION_PROMPT).param("text", text))
+                .user(u -> u.text(EXTRACTION_PROMPT).param("text", ragText))
                 .call()
                 .content();
 

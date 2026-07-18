@@ -15,11 +15,12 @@ export default function Login() {
     setError('');
     try {
       const { data } = await auth.login(email, password);
-      login(data.token || 'dev-token');
+      const token = data.token || data.accessToken;
+      if (!token) throw new Error('No token in response');
+      login(token);
       navigate('/upload');
     } catch (err) {
-      login('dev-token');
-      navigate('/upload');
+      setError(err?.response?.data?.message || err.message || 'Login failed');
     }
   }
 

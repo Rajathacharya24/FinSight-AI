@@ -1,119 +1,170 @@
-# FinSight AI
+# FinSight-AI
 
-AI-powered financial document intelligence platform: upload a document, agents extract structured data, validate compliance, and produce a recommendation.
+AI-powered loan application processing platform built on Spring Boot microservices.
+
+## Architecture
 
 ```
-Upload  →  Extract  →  Validate  →  Recommend
- (Document        (Document          (Compliance     (Decision
-  Analyzer)        Analyzer)          Agent)          Agent)
+Browser → nginx (frontend) → API Gateway (:8080)
+                                    │
+              ┌─────────────────────┼──────────────────────┐
+              ▼                     ▼                      ▼
+        auth-service          document-service         ai-service
+           (:8081)               (:8082)                (:8083)
+                                                           │
+                                                    workflow-service
+                                                        (:8084)
+Infrastructure:
+  PostgreSQL + pgvector │ Redis │ Kafka │ Eureka │ Config Server │ Zipkin
 ```
-
-## Stack
-
-- **Backend:** Java 21, Spring Boot 3.5, Spring Cloud (Config, Eureka, Gateway)
-- **Messaging:** Apache Kafka (producer / consumer / retry / DLQ)
-- **AI:** Spring AI (RAG via pgvector)
-- **Persistence:** PostgreSQL + Flyway
-- **Frontend:** React + Vite + Tailwind + Recharts
-- **Observability:** Prometheus, Grafana, Zipkin, Spring Actuator, Micrometer Tracing
-- **Packaging:** Docker Compose, GitHub Actions
 
 ## Services
 
-| Service             | Port  | Purpose                                          |
-|---------------------|-------|--------------------------------------------------|
-| config-server       | 8888  | Centralised configuration                        |
-| discovery-server    | 8761  | Eureka service registry                          |
-| api-gateway         | 8080  | Public entry point                               |
-| auth-service        | 8081  | JWT auth, users                                  |
-| document-service    | 8082  | PDF upload + text extraction                     |
-| ai-service          | 8083  | LLM extraction, RAG                              |
-| workflow-service    | 8084  | Orchestrates the 3 agents, publishes Kafka events|
-| frontend            | 3000  | React console                                    |
-| postgres            | 5432  | Relational + pgvector                            |
-| redis               | 6379  | Cache, rate limiting                             |
-| kafka               | 9092  | Event bus                                        |
-| kafka-ui            | 8090  | Browser UI for topics                            |
-| prometheus          | 9090  | Metrics                                          |
-| grafana             | 3001  | Dashboards                                       |
-| zipkin              | 9411  | Distributed tracing                              |
+| Service | Port | Responsibility |
+|---|---|---|
+| `config-server` | 8888 | Centralised config (Eureka-registered) |
+| `discovery-server` | 8761 | Eureka service registry |
+| `api-gateway` | 8080 | Spring Cloud Gateway — routing, CORS, rate-limit, error handling |
+| `auth-service` | 8081 | JWT auth, user registration, Redis-backed rate limiting |
+| `document-service` | 8082 | PDF upload, text extraction, file validation, ClamAV interface |
+| `ai-service` | 8083 | Spring AI + pgvector RAG pipeline, structured data extraction |
+| `workflow-service` | 8084 | Kafka-driven orchestration, Resilience4j circuit breakers, DLQ |
+| `frontend` | 3000 | React / Vite SPA (proxied via nginx in Docker) |
 
-## Quick start
+## Quick Start
+
+### Prerequisites
+
+- Docker ≥ 24 and Docker Compose v2
+- A Groq or OpenAI API key
+
+### 1. Clone & configure secrets
 
 ```bash
-./run.sh
+git clone https://github.com/your-org/FinSight-AI.git
+cd FinSight-AI
+cp .env.example .env          # fill in your secrets
 ```
 
-Then open:
+`.env` must contain **at minimum**:
 
-- Frontend: <http://localhost:3000>
-- Swagger (workflow): <http://localhost:8084/swagger-ui.html>
-- Grafana: <http://localhost:3001> (admin / admin)
-- Prometheus: <http://localhost:9090>
-- Zipkin: <http://localhost:9411>
-- Kafka UI: <http://localhost:8090>
-- Eureka: <http://localhost:8761>
+```env
+JWT_SECRET=<random-256-bit-hex>
+GROQ_API_KEY=<your-key>        # or OPENAI_API_KEY
+DB_PASSWORD=finsight_password
+```
 
-## Workflow Service API
-
-### Start a workflow
+### 2. Start everything
 
 ```bash
+docker compose up --build -d
+```
+
+Services start in dependency order. Config-server and Eureka come up first; microservices wait for them.
+
+### 3. Access
+
+| URL | What |
+|---|---|
+| `http://localhost:3000` | Frontend SPA |
+| `http://localhost:8080` | API Gateway |
+| `http://localhost:8761` | Eureka Dashboard |
+| `http://localhost:9411` | Zipkin Traces |
+| `http://localhost:8081/swagger-ui.html` | Auth API docs |
+| `http://localhost:8083/swagger-ui.html` | AI extraction API docs |
+
+### 4. Verify health
+
+```bash
+# All services up
+curl http://localhost:8080/actuator/health | jq '.status'
+
+# Circuit breaker state
+curl http://localhost:8084/actuator/health | jq '.components.circuitBreakers'
+
+# Eureka registry
+curl http://localhost:8761/eureka/apps | grep '<app>'
+```
+
+## API Reference
+
+### Auth
+
+```bash
+# Register
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user@example.com","password":"secret123"}'
+
+# Login → returns { "token": "..." }
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user@example.com","password":"secret123"}'
+```
+
+### Upload & Process a Document
+
+```bash
+TOKEN="Bearer <your-jwt>"
+
+# Upload PDF — triggers full workflow
 curl -X POST http://localhost:8080/api/v1/workflows \
-  -F 'metadata={"title":"Loan App","description":"Q3"};type=application/json' \
-  -F 'file=@sample.pdf'
+  -H "Authorization: $TOKEN" \
+  -F 'metadata={"title":"Q3 Application","description":""};type=application/json' \
+  -F 'file=@/path/to/loan.pdf;type=application/pdf'
+
+# Poll workflow status
+curl http://localhost:8080/api/v1/workflows/<id> -H "Authorization: $TOKEN"
+
+# Get extracted structured data
+curl http://localhost:8080/api/v1/workflows/<id>/extraction -H "Authorization: $TOKEN"
 ```
 
-### Get a workflow + audit log
+## Security Notes
+
+- **JWT_SECRET** is required at startup — the application will refuse to start if it is missing.
+- Login/register endpoints are rate-limited to **5 requests/min per IP** via Redis.
+- File uploads are validated for type (PDF only) and size (≤ 10 MB) before storage.
+- All inter-service calls are guarded by Resilience4j circuit breakers (50% failure threshold, 30 s open state).
+- Expired/invalid JWT tokens auto-redirect the frontend to the login page (401 interceptor).
+
+## Development
+
+### Build & test a single service
 
 ```bash
-curl http://localhost:8080/api/v1/workflows/1
-curl http://localhost:8080/api/v1/workflows/1/audit-log
+cd workflow-service
+mvn clean test
 ```
 
-### Analytics
+### Run locally (outside Docker)
+
+Requires Postgres, Redis, Kafka, and Eureka running (see `docker-compose.yml` for ports).
 
 ```bash
-curl http://localhost:8080/api/v1/analytics/summary
-curl http://localhost:8080/api/v1/analytics/timeseries
+export JWT_SECRET=$(openssl rand -hex 32)
+export GROQ_API_KEY=<key>
+cd auth-service && mvn spring-boot:run
 ```
 
-## Kafka events
-
-| Topic                              | Producer        | When                          |
-|------------------------------------|-----------------|-------------------------------|
-| `finsight.document.uploaded`       | workflow-service| After upload step             |
-| `finsight.extraction.completed`    | workflow-service| After extraction step         |
-| `finsight.analysis.completed`      | workflow-service| After full workflow completes |
-
-Each topic auto-creates a `*.DLT` dead-letter topic. Listeners retry 4× with exponential backoff (1s → 10s) before routing to DLT.
-
-## Tests
+### Frontend dev server
 
 ```bash
-mvn -B verify                       # all backend modules
-cd frontend && npm install && npm test
+cd frontend
+cp .env.example .env      # VITE_API_BASE_URL defaults to empty (uses Vite proxy → localhost:8080)
+npm install
+npm run dev               # http://localhost:3000
 ```
 
-## Phases
+## Production Hardening Applied
 
-| Phase | Scope                                                        |
-|-------|--------------------------------------------------------------|
-| 1     | Infrastructure (Postgres, Redis, Eureka, Config, Gateway)    |
-| 2     | Auth service (JWT)                                           |
-| 3     | Document upload + extraction                                 |
-| 4     | AI extraction agents                                         |
-| 5     | RAG (pgvector + embeddings)                                  |
-| 6     | Kafka events + workflow orchestration                        |
-| 7     | React dashboard                                              |
-| 8     | Production: Docker Compose, CI, monitoring, deployment guide |
-
-## More docs
-
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — diagrams + flow
-- [DEPLOYMENT.md](./DEPLOYMENT.md) — running locally & in prod
-- [.env.example](./.env.example) — env var reference
-
-## License
-
-MIT
+| Area | What |
+|---|---|
+| Secrets | `JWT_SECRET` enforced via env — no hardcoded fallbacks |
+| Auth | BCrypt cost 12, Redis rate limiter (5 req/min/IP) |
+| API Gateway | Centralized JSON error handler, CORS, DedupeResponseHeader |
+| File Upload | Type (PDF), size (10 MB), malware scan gate |
+| RAG Pipeline | Real pgvector store — chunking → embed → retrieve → generate |
+| Kafka | Retryable topics (4 attempts, exponential back-off), DLQ marks workflow FAILED |
+| Circuit Breakers | Resilience4j on all inter-service calls, health indicators exposed |
+| Observability | Micrometer + Prometheus metrics, distributed tracing via Zipkin |

@@ -17,6 +17,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.multipart.MultipartFile;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -29,6 +30,7 @@ public class DocumentServiceClient {
     private final RestClient.Builder restClientBuilder;
     private final WorkflowProperties properties;
 
+    @CircuitBreaker(name = "documentServiceUpload", fallbackMethod = "fallbackUpload")
     public DocumentUploadResponse uploadDocument(String title, String description, MultipartFile file) {
         try {
             Map<String, String> metadata = new HashMap<>();
@@ -70,6 +72,11 @@ public class DocumentServiceClient {
         }
     }
 
+    public DocumentUploadResponse fallbackUpload(String title, String description, MultipartFile file, Throwable t) {
+        throw new WorkflowException("Document Service is currently unavailable. Upload failed.", t);
+    }
+
+    @CircuitBreaker(name = "documentServiceContent", fallbackMethod = "fallbackGetContent")
     public String getDocumentContent(Long documentId) {
         try {
             DocumentContentResponse response = restClientBuilder.build()
@@ -84,5 +91,9 @@ public class DocumentServiceClient {
         } catch (RestClientException e) {
             throw new WorkflowException("Failed to fetch document content", e);
         }
+    }
+
+    public String fallbackGetContent(Long documentId, Throwable t) {
+        throw new WorkflowException("Document Service is currently unavailable. Content fetch failed for document: " + documentId, t);
     }
 }

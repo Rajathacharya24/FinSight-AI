@@ -85,3 +85,40 @@ finsight:
   workflow:
     document-service-url: ${DOCUMENT_SERVICE_URL:http://document-service}
     ai-service-url: ${AI_SERVICE_URL:http://ai-service}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      aiService:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 3
+        slidingWindowType: COUNT_BASED
+        minimumNumberOfCalls: 5
+        waitDurationInOpenState: 30s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+      documentServiceUpload:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 3
+        slidingWindowType: COUNT_BASED
+        minimumNumberOfCalls: 5
+        waitDurationInOpenState: 30s
+        failureRateThreshold: 50
+      documentServiceContent:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 3
+        slidingWindowType: COUNT_BASED
+        minimumNumberOfCalls: 5
+        waitDurationInOpenState: 30s
+        failureRateThreshold: 50
+  timelimiter:
+    instances:
+      aiService:
+        timeoutDuration: 30s
+      documentServiceUpload:
+        timeoutDuration: 15s
+      documentServiceContent:
+        timeoutDuration: 10s

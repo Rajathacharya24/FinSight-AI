@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 
 @Component
 @RequiredArgsConstructor
@@ -17,6 +18,7 @@ public class AIServiceClient {
     private final RestClient.Builder restClientBuilder;
     private final WorkflowProperties properties;
 
+    @CircuitBreaker(name = "aiService", fallbackMethod = "fallbackExtract")
     public ExtractionData extractStructuredData(Long documentId, String extractedText) {
         try {
             ExtractionRequest request = new ExtractionRequest();
@@ -37,5 +39,9 @@ public class AIServiceClient {
         } catch (RestClientException e) {
             throw new WorkflowException("Failed to extract structured data", e);
         }
+    }
+
+    public ExtractionData fallbackExtract(Long documentId, String extractedText, Throwable t) {
+        throw new WorkflowException("AI Service is currently unavailable. Extraction failed for document: " + documentId, t);
     }
 }

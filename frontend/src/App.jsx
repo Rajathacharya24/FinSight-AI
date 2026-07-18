@@ -3,6 +3,7 @@ import Login from './pages/Login.jsx';
 import Upload from './pages/Upload.jsx';
 import Documents from './pages/Documents.jsx';
 import Analytics from './pages/Analytics.jsx';
+import WorkflowDetail from './pages/WorkflowDetail.jsx';
 import Layout from './components/Layout.jsx';
 import { useAuth } from './hooks/useAuth.js';
 
@@ -26,6 +27,7 @@ export default function App() {
         <Route index element={<Navigate to="/upload" replace />} />
         <Route path="upload" element={<Upload />} />
         <Route path="documents" element={<Documents />} />
+        <Route path="documents/:id" element={<WorkflowDetail />} />
         <Route path="analytics" element={<Analytics />} />
       </Route>
     </Routes>

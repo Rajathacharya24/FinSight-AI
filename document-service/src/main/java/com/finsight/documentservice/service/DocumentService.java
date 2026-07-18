@@ -27,6 +27,7 @@ public class DocumentService {
     private final DocumentContentRepository documentContentRepository;
     private final PdfExtractorService pdfExtractorService;
     private final DocumentStorageProperties storageProperties;
+    private final VirusScannerService virusScannerService;
 
     /**
      * Handles the complete upload flow:
@@ -39,6 +40,23 @@ public class DocumentService {
      */
     public DocumentUploadResponse uploadDocument(@Valid DocumentUploadRequest request,
                                                  MultipartFile file) throws IOException {
+        
+        // 0️⃣ Validate file type and size
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("Cannot upload empty file");
+        }
+        if (file.getSize() > 10 * 1024 * 1024) { // 10MB limit
+            throw new IllegalArgumentException("File size exceeds limit of 10MB");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.equals("application/pdf")) {
+            throw new IllegalArgumentException("Only PDF files are supported");
+        }
+
+        // 0.5️⃣ Scan for viruses
+        if (!virusScannerService.scanFile(file)) {
+            throw new IllegalArgumentException("File rejected by malware scanner");
+        }
         // 1️⃣ Save metadata record (status will be updated later)
         Document document = new Document();
         Long userId = request.getUserId();

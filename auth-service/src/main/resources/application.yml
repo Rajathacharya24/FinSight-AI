@@ -53,7 +53,7 @@ management:
 
 app:
   jwt:
-    secret: ${JWT_SECRET:VGhpcy1pcy1hLXZlcnktbG9uZy1zZWNyZXQta2V5LWZvci1qd3Qtc2lnbmluZy0yNTYtYml0cw==}
+    secret: ${JWT_SECRET}
     expirationMs: ${JWT_EXPIRATION_MS:86400000}
   refreshToken:
     expirationMs: ${REFRESH_TOKEN_EXPIRATION_MS:604800000}

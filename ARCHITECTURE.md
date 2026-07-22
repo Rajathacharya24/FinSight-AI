@@ -119,4 +119,30 @@ updated_at
 - **Metrics:** Each Spring Boot service exposes `/actuator/prometheus`; Prometheus scrapes every 15s. The orchestrator method `WorkflowOrchestrator.execute` is wrapped with `@Timed("workflow.execute")` so latency histograms appear in Grafana.
 - **Tracing:** `micrometer-tracing-bridge-otel` → Zipkin exporter. Every HTTP / Kafka call propagates `traceId` + `spanId`, also injected into log lines via the logging pattern.
 - **Logs:** Pattern: `LEVEL [service,traceId,spanId]`.
-- **Dashboards:** Provisioned automatically into Grafana from `infra/grafana/dashboards/`.
+- **Dashboards:** Provisioned automatically into Grafana from `infra/grafana/dashboards/workflow-service.json`.
+
+## Analytics API
+
+The `AnalyticsController` (in `workflow-service`) exposes two endpoints:
+
+- `GET /api/v1/analytics/summary` — Aggregate stats: total workflow count, completed, failed, average processing duration.
+- `GET /api/v1/analytics/timeseries` — Per-workflow metrics including `durationSeconds` used by the frontend charts.
+
+## Sample PDF Generator
+
+Located at `infra/scripts/GenSamplePdf.java`, this utility generates a realistic loan application PDF for end-to-end testing:
+
+```bash
+javac infra/scripts/GenSamplePdf.java -d /tmp/classes
+java -cp /tmp/classes GenSamplePdf
+```
+
+## Frontend Routes
+
+| Route | Page | Description |
+|---|---|---|
+| `/upload` | Upload | Upload PDF → kick off workflow pipeline |
+| `/documents` | Workflows | List all workflows with status/step/timestamp |
+| `/documents/:id` | Workflow Detail | Summary, extracted data, and audit log timeline |
+| `/analytics` | Analytics | Charts for duration, accuracy, and cost |
+| `/login` | Login | JWT authentication (dev credentials pre-filled) |

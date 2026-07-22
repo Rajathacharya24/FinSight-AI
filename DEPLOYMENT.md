@@ -34,9 +34,10 @@ open http://localhost:3001                          # Grafana
 ## 4. Run a workflow end-to-end
 
 ```bash
+# Generate a sample PDF first (see infra/scripts/GenSamplePdf.java)
 curl -X POST http://localhost:8080/api/v1/workflows \
   -F 'metadata={"title":"Demo","description":"Smoke test"};type=application/json' \
-  -F 'file=@./samples/loan-app.pdf'
+  -F 'file=@loan-application-sample.pdf'
 ```
 
 You should see:

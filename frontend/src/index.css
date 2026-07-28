@@ -2,4 +2,134 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root { height: 100%; }
+/* ─── Base resets ─── */
+html, body, #root {
+  height: 100%;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* ─── Scrollbar styling ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.03);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(124,58,237,0.35);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(124,58,237,0.6);
+}
+
+/* ─── Glass card utility ─── */
+@layer components {
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl shadow-glass;
+  }
+
+  .glass-card-solid {
+    @apply bg-dark-800/90 backdrop-blur-sm border border-white/10 rounded-2xl shadow-card;
+  }
+
+  /* Status badge */
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold tracking-wide;
+  }
+
+  /* Primary CTA button */
+  .btn-primary {
+    @apply relative inline-flex items-center justify-center gap-2
+           px-6 py-2.5 rounded-xl text-sm font-semibold text-white
+           bg-gradient-brand shadow-glow-brand
+           hover:shadow-[0_0_45px_rgba(124,58,237,0.65)]
+           hover:scale-[1.03]
+           active:scale-[0.98]
+           transition-all duration-200 ease-out
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 disabled:shadow-none;
+  }
+
+  /* Secondary ghost button */
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2
+           px-5 py-2 rounded-xl text-sm font-medium text-slate-300
+           border border-white/10
+           hover:border-white/25 hover:text-white hover:bg-white/5
+           transition-all duration-200;
+  }
+
+  /* Form input */
+  .form-input {
+    @apply w-full bg-white/5 border border-white/15 rounded-xl
+           px-4 py-2.5 text-sm text-white placeholder-slate-500
+           focus:outline-none focus:ring-2 focus:ring-brand-500/60 focus:border-brand-500/40
+           transition-all duration-200;
+  }
+
+  /* Stat card */
+  .stat-card {
+    @apply glass-card-solid p-5 flex flex-col gap-1
+           hover:border-white/20 hover:shadow-card-hover
+           transition-all duration-250 cursor-default;
+  }
+
+  /* Nav link */
+  .nav-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
+           text-slate-400 hover:text-white hover:bg-white/8
+           transition-all duration-200;
+  }
+  .nav-link.active {
+    @apply text-white bg-brand-600/25 border border-brand-500/30;
+  }
+
+  /* Section heading */
+  .section-title {
+    @apply text-2xl font-bold text-white tracking-tight;
+  }
+  .section-subtitle {
+    @apply text-sm text-slate-400 mt-0.5;
+  }
+
+  /* Table row */
+  .trow {
+    @apply border-t border-white/5 hover:bg-white/4 cursor-pointer transition-colors duration-150;
+  }
+}
+
+/* ─── Animated gradient background ─── */
+.animated-bg {
+  background: linear-gradient(125deg, #090e16 0%, #0f1720 40%, #11193a 70%, #080e16 100%);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ─── Glow dot decorative ─── */
+.glow-dot {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+/* ─── Step progress timeline ─── */
+.step-connector {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(to right, rgba(124,58,237,0.5), rgba(61,90,248,0.5));
+}
+.step-connector.inactive {
+  background: rgba(255,255,255,0.1);
+}

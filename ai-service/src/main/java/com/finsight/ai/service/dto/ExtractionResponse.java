@@ -14,4 +14,12 @@ public class ExtractionResponse {
     private String address;
     private String loanAmount;
     private String status;
+
+    /**
+     * Confidence score in the range [0, 100].
+     * Computed from retrieval quality (number of chunks found) and parse success.
+     * 100 = all fields extracted, multiple relevant chunks retrieved.
+     * Lower values indicate partial extraction or thin RAG context.
+     */
+    private double confidenceScore;
 }

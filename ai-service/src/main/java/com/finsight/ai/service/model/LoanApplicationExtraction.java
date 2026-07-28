@@ -33,4 +33,11 @@ public class LoanApplicationExtraction {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
+
+    /**
+     * AI confidence score [0, 100] — stored for audit and analytics.
+     * Computed from retrieval quality and extraction parse success.
+     */
+    @Column(name = "confidence_score")
+    private Double confidenceScore;
 }

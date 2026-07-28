@@ -27,4 +27,11 @@ public class Document {
 
     @Column(name = "uploaded_at", nullable = false)
     private Instant uploadedAt;
+
+    /**
+     * Object store path: either {@code bucket/objectKey} (MinIO) or an absolute filesystem path (local disk).
+     * Nullable for legacy records created before V3 migration.
+     */
+    @Column(name = "storage_key", length = 1024)
+    private String storageKey;
 }

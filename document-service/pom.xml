@@ -88,6 +88,18 @@
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- MinIO S3-compatible object store client -->
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.5.10</version>
+        </dependency>
+        <!-- OkHttp (required by MinIO client) -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.12.0</version>
+        </dependency>
     </dependencies>
 
     <build>

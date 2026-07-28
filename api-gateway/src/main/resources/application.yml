@@ -38,6 +38,11 @@ spring:
           predicates:
             - Path=/api/v1/workflows/**,/api/v1/analytics/**
 
+        - id: notification-service
+          uri: http://${NOTIFICATION_SERVICE_HOST:notification-service}:${NOTIFICATION_SERVICE_PORT:8085}
+          predicates:
+            - Path=/api/v1/notifications/**
+
 server:
   port: ${SERVER_PORT:8080}
 
@@ -67,3 +72,9 @@ management:
 logging:
   pattern:
     level: "%5p [${spring.application.name},%X{traceId:-},%X{spanId:-}]"
+
+# JWT secret for gateway-level token validation
+# Must match the secret used by auth-service to sign tokens
+app:
+  jwt:
+    secret: ${JWT_SECRET}

@@ -66,3 +66,13 @@ logging:
     level: "%5p [${spring.application.name},%X{traceId:-},%X{spanId:-}]"
   level:
     root: INFO
+
+# ─── MinIO object store ───
+# Set minio.enabled=true and provide endpoint/credentials to activate MinIO storage.
+# When disabled (default), documents are stored on local disk under document.upload-dir.
+minio:
+  enabled: ${MINIO_ENABLED:false}
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  bucket: ${MINIO_BUCKET:finsight-documents}

@@ -44,6 +44,28 @@ public class WorkflowInstance {
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
 
+    /** Reason stored when workflow enters FAILED state — immutable once set. */
+    @Column(name = "failure_reason", columnDefinition = "TEXT")
+    private String failureReason;
+
+    // ── Review fields ──────────────────────────────────────────────────────────
+
+    /** Reviewer action: APPROVE, REJECT, REQUEST_INFO */
+    @Column(name = "review_action", length = 20)
+    private String reviewAction;
+
+    /** Reviewer's written rationale for the decision. */
+    @Column(name = "review_reason", columnDefinition = "TEXT")
+    private String reviewReason;
+
+    /** Username/ID of the reviewer who made the decision. */
+    @Column(name = "reviewed_by", length = 100)
+    private String reviewedBy;
+
+    /** Timestamp when the review decision was recorded. */
+    @Column(name = "reviewed_at")
+    private Instant reviewedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

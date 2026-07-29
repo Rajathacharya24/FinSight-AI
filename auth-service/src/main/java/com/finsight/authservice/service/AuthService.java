@@ -65,7 +65,7 @@ public class AuthService {
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(ERole.ROLE_USER);
+        user.setRole(ERole.ROLE_APPLICANT);
 
         return userRepository.save(user);
     }
@@ -143,5 +143,39 @@ public class AuthService {
                 })
                 .orElseThrow(() -> new TokenRefreshException(requestRefreshToken,
                         "Refresh token not found in database."));
+    }
+
+    /**
+     * Revokes the given refresh token (logout).
+     * After this call the token cannot be used to obtain new access tokens.
+     *
+     * @param refreshToken the raw refresh token to revoke
+     */
+    @Transactional
+    public void logout(String refreshToken) {
+        refreshTokenService.findByToken(refreshToken).ifPresent(rt -> {
+            logger.info("Revoking refresh token for user: {}", rt.getUser().getUsername());
+            refreshTokenService.deleteByUserId(rt.getUser().getId());
+        });
+    }
+
+    /**
+     * Returns the profile of the currently authenticated user.
+     *
+     * @param userDetails the authenticated principal
+     * @return JwtResponse containing user info (no tokens)
+     */
+    public JwtResponse getCurrentUser(UserDetailsImpl userDetails) {
+        String role = userDetails.getAuthorities().stream()
+                .findFirst()
+                .map(item -> item.getAuthority())
+                .orElse("ROLE_APPLICANT");
+
+        return JwtResponse.builder()
+                .id(userDetails.getId())
+                .username(userDetails.getUsername())
+                .email(userDetails.getEmail())
+                .role(role)
+                .build();
     }
 }

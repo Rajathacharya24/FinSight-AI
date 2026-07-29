@@ -11,10 +11,13 @@ spring:
       globalcors:
         cors-configurations:
           '[/**]':
-            allowedOriginPatterns: "*"
-            allowedMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+            # env-driven for prod: set CORS_ALLOWED_ORIGINS=https://your-domain.com
+            allowedOriginPatterns: "${CORS_ALLOWED_ORIGINS:http://localhost:3000}"
+            allowedMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
             allowedHeaders: "*"
+            exposedHeaders: ["X-Trace-Id"]
             allowCredentials: true
+            maxAge: 3600
       routes:
         - id: auth-service
           uri: http://${AUTH_SERVICE_HOST:auth-service}:${AUTH_SERVICE_PORT:8081}
@@ -31,7 +34,7 @@ spring:
         - id: ai-service
           uri: http://${AI_SERVICE_HOST:ai-service}:${AI_SERVICE_PORT:8083}
           predicates:
-            - Path=/api/v1/extract/**
+            - Path=/api/v1/ai/**
 
         - id: workflow-service
           uri: http://${WORKFLOW_SERVICE_HOST:workflow-service}:${WORKFLOW_SERVICE_PORT:8084}

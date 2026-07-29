@@ -1,0 +1,76 @@
+# docker-compose.override.yml — Local Development Overrides
+# Copy this file to docker-compose.override.yml to activate.
+# It adds remote debug ports and enables hot-reload for Java services.
+#
+# Usage:
+#   cp docker-compose.override.yml.example docker-compose.override.yml
+#   docker compose up -d
+#
+# Connect a debugger to:
+#   config-server    → localhost:5005
+#   discovery-server → localhost:5006
+#   api-gateway      → localhost:5007
+#   auth-service     → localhost:5008
+#   document-service → localhost:5009
+#   ai-service       → localhost:5010
+#   workflow-service → localhost:5011
+#   notification-service → localhost:5012
+
+version: '3.8'
+
+services:
+  config-server:
+    ports:
+      - "5005:5005"
+    environment:
+      JAVA_TOOL_OPTIONS: >-
+        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+
+  discovery-server:
+    ports:
+      - "5006:5006"
+    environment:
+      JAVA_TOOL_OPTIONS: >-
+        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5006
+
+  api-gateway:
+    ports:
+      - "5007:5007"
+    environment:
+      JAVA_TOOL_OPTIONS: >-
+        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5007
+
+  auth-service:
+    ports:
+      - "5008:5008"
+    environment:
+      JAVA_TOOL_OPTIONS: >-
+        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5008
+
+  document-service:
+    ports:
+      - "5009:5009"
+    environment:
+      JAVA_TOOL_OPTIONS: >-
+        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5009
+
+  ai-service:
+    ports:
+      - "5010:5010"
+    environment:
+      JAVA_TOOL_OPTIONS: >-
+        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5010
+
+  workflow-service:
+    ports:
+      - "5011:5011"
+    environment:
+      JAVA_TOOL_OPTIONS: >-
+        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5011
+
+  notification-service:
+    ports:
+      - "5012:5012"
+    environment:
+      JAVA_TOOL_OPTIONS: >-
+        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5012

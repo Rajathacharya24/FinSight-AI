@@ -19,6 +19,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: "0.5"
 
   redis:
     image: redis:7.2-alpine
@@ -33,6 +37,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: "0.25"
 
   # ─────────────── Object Storage ───────────────
   minio:
@@ -52,6 +59,29 @@ services:
       interval: 15s
       timeout: 10s
       retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: "0.5"
+
+  # ─────────────── Mail (local dev) ───────────────
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: finsight-mailpit
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8025/api/v1/info"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    mem_limit: 64m
+    cpus: "0.1"
 
   # ─────────────── Messaging ───────────────
   zookeeper:
@@ -65,6 +95,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: "0.25"
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -86,11 +119,14 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     healthcheck:
-      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"]
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:29092 --list"]
       interval: 20s
       timeout: 10s
       retries: 5
       start_period: 30s
+    restart: unless-stopped
+    mem_limit: 768m
+    cpus: "0.5"
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -103,6 +139,9 @@ services:
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: "0.25"
 
   # ─────────────── Observability ───────────────
   prometheus:
@@ -112,8 +151,18 @@ services:
       - "9090:9090"
     volumes:
       - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheusdata:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: "0.25"
 
   grafana:
     image: grafana/grafana:latest
@@ -129,12 +178,28 @@ services:
       - grafanadata:/var/lib/grafana
       - ./infra/grafana/provisioning:/etc/grafana/provisioning
       - ./infra/grafana/dashboards:/var/lib/grafana/dashboards
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: "0.25"
 
   zipkin:
     image: openzipkin/zipkin:latest
     container_name: finsight-zipkin
     ports:
       - "9411:9411"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9411/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: "0.25"
 
   # ─────────────── Infrastructure ───────────────
   config-server:
@@ -152,6 +217,10 @@ services:
       interval: 15s
       timeout: 10s
       retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    mem_limit: 384m
+    cpus: "0.25"
 
   discovery-server:
     build:
@@ -170,6 +239,10 @@ services:
       interval: 15s
       timeout: 10s
       retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    mem_limit: 384m
+    cpus: "0.25"
 
   api-gateway:
     build:
@@ -184,11 +257,23 @@ services:
       ZIPKIN_URL: http://zipkin:9411/api/v2/spans
       SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
       JWT_SECRET: ${JWT_SECRET}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
     depends_on:
+      config-server:
+        condition: service_healthy
       discovery-server:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: "0.5"
 
   # ─────────────── Core Services ───────────────
   auth-service:
@@ -209,13 +294,26 @@ services:
       ZIPKIN_URL: http://zipkin:9411/api/v2/spans
       SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
       JWT_SECRET: ${JWT_SECRET}
+      REDIS_HOST: finsight-redis
+      REDIS_PORT: 6379
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       config-server:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: "0.5"
 
   document-service:
     build:
@@ -235,7 +333,7 @@ services:
       ZIPKIN_URL: http://zipkin:9411/api/v2/spans
       SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
       # MinIO object storage — set MINIO_ENABLED=true to activate
-      MINIO_ENABLED: ${MINIO_ENABLED:-false}
+      MINIO_ENABLED: ${MINIO_ENABLED:-true}
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
@@ -249,6 +347,17 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    mem_limit: 768m
+    cpus: "0.5"
 
   ai-service:
     build:
@@ -280,6 +389,15 @@ services:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    mem_limit: 768m
+    cpus: "0.75"
 
   workflow-service:
     build:
@@ -309,6 +427,19 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      document-service:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    restart: unless-stopped
+    mem_limit: 640m
+    cpus: "0.5"
 
   notification-service:
     build:
@@ -318,26 +449,43 @@ services:
     ports:
       - "8085:8085"
     environment:
+      DB_HOST: finsight-postgres
+      DB_NAME: finsight_db
+      DB_USER: finsight_user
+      DB_PASSWORD: finsight_password
       CONFIG_SERVER_URL: http://config-server:8888
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       EUREKA_URL: http://discovery-server:8761/eureka
       ZIPKIN_URL: http://zipkin:9411/api/v2/spans
       SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
-      # SMTP settings — leave blank to use stub (log-only) mode
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
+      # Mailpit SMTP for local dev — override with real SMTP in prod
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       NOTIFICATION_FROM_ADDRESS: ${NOTIFICATION_FROM_ADDRESS:-noreply@finsight.ai}
       NOTIFICATION_TO_ADDRESS: ${NOTIFICATION_TO_ADDRESS:-}
       NOTIFICATION_WEBHOOK_URL: ${NOTIFICATION_WEBHOOK_URL:-}
     depends_on:
+      postgres:
+        condition: service_healthy
       config-server:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      mailpit:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: "0.25"
 
   # ─────────────── Frontend ───────────────
   frontend:
@@ -348,12 +496,17 @@ services:
     ports:
       - "3000:80"
     environment:
-      VITE_API_BASE_URL: http://localhost:8080
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
     depends_on:
-      - api-gateway
+      api-gateway:
+        condition: service_healthy
+    restart: unless-stopped
+    mem_limit: 64m
+    cpus: "0.1"
 
 volumes:
   pgdata:
   redisdata:
   grafanadata:
   miniodata:
+  prometheusdata:

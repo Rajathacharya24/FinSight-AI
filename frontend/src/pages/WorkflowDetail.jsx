@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { workflows, documents } from '../api/client.js';
 
 const STEPS_ORDER = ['UPLOAD', 'EXTRACT', 'VALIDATE', 'RECOMMEND'];
+const POLLING_STATUSES = ['UPLOADED', 'SCANNING', 'EXTRACTING_TEXT', 'AI_EXTRACTION', 'IN_PROGRESS', 'CREATED'];
 
 const STATUS_CONFIG = {
   COMPLETED:   { cls: 'bg-success-500/15 text-success-300 border-success-500/25' },
@@ -55,14 +56,14 @@ function StepTimeline({ currentStep, status }) {
   );
 }
 
-function ConfidenceBar({ score }) {
+function ConfidenceBar({ score, label }) {
   if (score == null) return null;
   const pct = Math.round(score);
   const color = pct >= 80 ? 'bg-success-500' : pct >= 50 ? 'bg-warning-500' : 'bg-danger-500';
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-xs">
-        <span className="text-slate-400">AI Confidence</span>
+        <span className="text-slate-400">{label || 'AI Confidence'}</span>
         <span className="font-semibold text-white">{pct}%</span>
       </div>
       <div className="w-full h-2 bg-white/8 rounded-full overflow-hidden">
@@ -75,6 +76,69 @@ function ConfidenceBar({ score }) {
   );
 }
 
+function ReviewPanel({ workflowId, onReviewed }) {
+  const [action, setAction]     = useState('APPROVE');
+  const [reason, setReason]     = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError]       = useState('');
+
+  const handleSubmit = async () => {
+    if (!reason.trim()) { setError('Please enter a reason.'); return; }
+    setSubmitting(true);
+    setError('');
+    try {
+      await workflows.review(workflowId, action, reason);
+      onReviewed();
+    } catch (e) {
+      setError(e?.response?.data?.message || e.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const actionConfig = {
+    APPROVE:      { label: 'Approve',         cls: 'bg-success-500 hover:bg-success-400 text-white' },
+    REJECT:       { label: 'Reject',           cls: 'bg-danger-500  hover:bg-danger-400  text-white' },
+    REQUEST_INFO: { label: 'Request Info',     cls: 'bg-warning-500 hover:bg-warning-400 text-white' },
+  };
+
+  return (
+    <div className="glass-card-solid p-5 space-y-4 border border-brand-500/25">
+      <h2 className="text-sm font-semibold text-white">📋 Review Decision</h2>
+      <div className="grid grid-cols-3 gap-2">
+        {Object.entries(actionConfig).map(([key, { label, cls }]) => (
+          <button
+            key={key}
+            onClick={() => setAction(key)}
+            className={`py-2 rounded-lg text-xs font-bold transition-all ${
+              action === key ? cls : 'bg-white/8 text-slate-400 hover:bg-white/12'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={reason}
+        onChange={e => setReason(e.target.value)}
+        placeholder="Enter reasoning for this decision (required)…"
+        rows={3}
+        className="w-full bg-white/6 border border-white/12 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500/50 resize-none"
+      />
+      {error && <p className="text-xs text-danger-300">{error}</p>}
+      <button
+        onClick={handleSubmit}
+        disabled={submitting}
+        className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all ${
+          actionConfig[action].cls
+        } disabled:opacity-50 disabled:cursor-not-allowed`}
+      >
+        {submitting ? 'Submitting…' : `Submit — ${actionConfig[action].label}`}
+      </button>
+    </div>
+  );
+}
+
 export default function WorkflowDetail() {
   const { id }                        = useParams();
   const [workflow, setWorkflow]       = useState(null);
@@ -82,30 +146,44 @@ export default function WorkflowDetail() {
   const [docContent, setDocContent]   = useState(null);
   const [error, setError]             = useState('');
   const [loading, setLoading]         = useState(true);
+  const pollingRef = useRef(null);
+
+  const load = useCallback(async () => {
+    try {
+      const [wfRes, auditRes] = await Promise.all([
+        workflows.get(id),
+        workflows.auditLog(id).catch(() => ({ data: [] })),
+      ]);
+      setWorkflow(wfRes.data);
+      setAuditLog(auditRes.data || []);
+
+      if (wfRes.data?.documentId) {
+        documents.getContent(wfRes.data.documentId)
+          .then((r) => setDocContent(r.data))
+          .catch(() => {});
+      }
+
+      // Auto-poll while workflow is processing
+      const shouldPoll = POLLING_STATUSES.includes(wfRes.data?.status);
+      if (shouldPoll && !pollingRef.current) {
+        pollingRef.current = setInterval(load, 4000);
+      } else if (!shouldPoll && pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    } catch (e) {
+      setError(e?.response?.data?.message || e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const [wfRes, auditRes] = await Promise.all([
-          workflows.get(id),
-          workflows.auditLog(id).catch(() => ({ data: [] })),
-        ]);
-        setWorkflow(wfRes.data);
-        setAuditLog(auditRes.data || []);
-
-        if (wfRes.data?.documentId) {
-          documents.getContent(wfRes.data.documentId)
-            .then((r) => setDocContent(r.data))
-            .catch(() => {});
-        }
-      } catch (e) {
-        setError(e?.response?.data?.message || e.message);
-      } finally {
-        setLoading(false);
-      }
-    }
     load();
-  }, [id]);
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, [load]);
 
   if (loading) {
     return (
@@ -172,19 +250,37 @@ export default function WorkflowDetail() {
           <h2 className="text-sm font-semibold text-white">Extracted Data</h2>
           <div className="grid grid-cols-2 gap-3">
             {[
-              ['Applicant',   extraction.applicantName],
-              ['Income',      extraction.income      ? `$${parseInt(extraction.income).toLocaleString()}`      : null],
-              ['Address',     extraction.address],
-              ['Loan Amount', extraction.loanAmount  ? `$${parseInt(extraction.loanAmount).toLocaleString()}`  : null],
+              ['Applicant',        extraction.applicantName],
+              ['Income',           extraction.income      ? `$${parseInt(extraction.income).toLocaleString()}`      : null],
+              ['Address',          extraction.address],
+              ['Loan Amount',      extraction.loanAmount  ? `$${parseInt(extraction.loanAmount).toLocaleString()}`  : null],
+              ['Employment',       extraction.employmentStatus],
+              ['Existing Debts',   extraction.existingDebts ? `$${parseInt(extraction.existingDebts).toLocaleString()}` : null],
             ].map(([label, val]) => val ? (
               <div key={label} className="bg-white/4 rounded-xl p-3">
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{label}</p>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider">{label}</p>
+                  {extraction.fieldConfidenceScores?.[label.toLowerCase().replace(' ', '')] != null && (
+                    <span className={`text-[9px] font-bold px-1 rounded ${
+                      extraction.fieldConfidenceScores[label.toLowerCase().replace(' ', '')] >= 80
+                        ? 'bg-success-500/20 text-success-300'
+                        : extraction.fieldConfidenceScores[label.toLowerCase().replace(' ', '')] >= 50
+                        ? 'bg-warning-500/20 text-warning-300'
+                        : 'bg-danger-500/20 text-danger-300'
+                    }`}>
+                      {extraction.fieldConfidenceScores[label.toLowerCase().replace(' ', '')]}%
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm font-semibold text-white">{val}</p>
               </div>
             ) : null)}
           </div>
           {extraction.confidenceScore != null && (
-            <ConfidenceBar score={extraction.confidenceScore} />
+            <ConfidenceBar score={extraction.confidenceScore} label="Overall AI Confidence" />
+          )}
+          {extraction.extractionDurationMs != null && (
+            <p className="text-[10px] text-slate-600">Extracted in {extraction.extractionDurationMs}ms</p>
           )}
         </div>
       )}
@@ -227,6 +323,11 @@ export default function WorkflowDetail() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Review Panel — shown only for REVIEW_PENDING and MANUAL_REVIEW */}
+      {(workflow.status === 'REVIEW_PENDING' || workflow.status === 'MANUAL_REVIEW') && (
+        <ReviewPanel workflowId={id} onReviewed={load} />
       )}
 
       {/* Audit Log */}

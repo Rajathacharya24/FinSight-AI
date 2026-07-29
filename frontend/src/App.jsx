@@ -4,6 +4,7 @@ import Upload from './pages/Upload.jsx';
 import Documents from './pages/Documents.jsx';
 import Analytics from './pages/Analytics.jsx';
 import WorkflowDetail from './pages/WorkflowDetail.jsx';
+import Notifications from './pages/Notifications.jsx';
 import Layout from './components/Layout.jsx';
 import { useAuth } from './hooks/useAuth.js';
 
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="documents" element={<Documents />} />
         <Route path="documents/:id" element={<WorkflowDetail />} />
         <Route path="analytics" element={<Analytics />} />
+        <Route path="notifications" element={<Notifications />} />
       </Route>
     </Routes>
   );

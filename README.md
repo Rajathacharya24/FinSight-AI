@@ -29,11 +29,13 @@ Infrastructure:
 | `document-service` | 8082 | PDF upload, text extraction, file validation, ClamAV interface |
 | `ai-service` | 8083 | Spring AI + pgvector RAG pipeline, structured data extraction |
 | `workflow-service` | 8084 | Kafka-driven orchestration, Resilience4j circuit breakers, DLQ |
+| `notification-service` | 8085 | Email (SMTP/Mailpit), webhooks, in-app history and alerts |
 | `frontend` | 3000 | React / Vite SPA (proxied via nginx in Docker) |
 | `kafka-ui` | 8090 | Kafka topic browser & message viewer |
 | `prometheus` | 9090 | Metrics collection (scrapes all /actuator/prometheus) |
 | `grafana` | 3001 | Observability dashboards (auto-provisioned) |
 | `zipkin` | 9411 | Distributed tracing UI |
+| `mailpit` | 8025 | Local SMTP server and Web UI for dev email testing |
 
 ## Quick Start
 
@@ -199,6 +201,7 @@ npm run dev               # http://localhost:3000
 | `/documents` | Workflows | List all workflows with status, step, and creation time |
 | `/documents/:id` | Workflow Detail | View workflow summary, extracted data, and full audit log |
 | `/analytics` | Analytics | Charts for processing time, accuracy, and cost per workflow |
+| `/notifications` | Notifications | View in-app notification history and mark as read |
 | `/login` | Login | JWT-based authentication (pre-filled dev credentials) |
 
 ### Generate a sample PDF for testing

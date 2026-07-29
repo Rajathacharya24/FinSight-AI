@@ -118,7 +118,8 @@ public class AuthService {
     public JwtResponse refreshToken(String requestRefreshToken) {
         return refreshTokenService.findByToken(requestRefreshToken)
                 .map(refreshTokenService::verifyExpiration)
-                .map(RefreshToken::getUser)
+                .map(rt -> userRepository.findById(rt.getUserId())
+                        .orElseThrow(() -> new RuntimeException("User not found: " + rt.getUserId())))
                 .map(user -> {
                     UserDetailsImpl userDetails = UserDetailsImpl.build(user);
                     Authentication authentication = new UsernamePasswordAuthenticationToken(
@@ -154,8 +155,8 @@ public class AuthService {
     @Transactional
     public void logout(String refreshToken) {
         refreshTokenService.findByToken(refreshToken).ifPresent(rt -> {
-            logger.info("Revoking refresh token for user: {}", rt.getUser().getUsername());
-            refreshTokenService.deleteByUserId(rt.getUser().getId());
+            logger.info("Revoking refresh token for user ID: {}", rt.getUserId());
+            refreshTokenService.deleteByUserId(rt.getUserId());
         });
     }
 

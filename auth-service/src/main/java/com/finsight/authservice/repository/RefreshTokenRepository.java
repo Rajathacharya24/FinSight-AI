@@ -1,17 +1,13 @@
 package com.finsight.authservice.repository;
 
 import com.finsight.authservice.model.RefreshToken;
-import com.finsight.authservice.model.User;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
 @Repository
-public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
+public interface RefreshTokenRepository extends CrudRepository<RefreshToken, String> {
     Optional<RefreshToken> findByToken(String token);
-
-    @Modifying
-    int deleteByUser(User user);
+    void deleteByUserId(Long userId);
 }

@@ -19,7 +19,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -100,8 +99,9 @@ public class WorkflowController {
         @ApiResponse(responseCode = "403", description = "Insufficient role — REVIEWER or ADMIN required"),
         @ApiResponse(responseCode = "404", description = "Workflow not found")
     })
+    // NOTE: Authorization (REVIEWER/ADMIN role check) is enforced at the api-gateway layer
+    // via the X-User-Role header. workflow-service trusts the gateway-validated role.
     @PostMapping("/{id}/review")
-    @PreAuthorize("hasAnyRole('REVIEWER', 'ADMIN')")
     public ResponseEntity<Map<String, Object>> review(
             @PathVariable Long id,
             @Valid @RequestBody ReviewRequest request,

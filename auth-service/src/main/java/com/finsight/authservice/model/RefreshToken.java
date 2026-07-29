@@ -1,12 +1,13 @@
 package com.finsight.authservice.model;
 
-import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.redis.core.RedisHash;
+import org.springframework.data.redis.core.index.Indexed;
 
 import java.time.Instant;
 
-@Entity
-@Table(name = "refresh_tokens", schema = "auth")
+@RedisHash(value = "RefreshToken", timeToLive = 604800)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -15,16 +16,13 @@ import java.time.Instant;
 public class RefreshToken {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false, unique = true)
-    private User user;
-
-    @Column(nullable = false, unique = true)
+    @Indexed
     private String token;
 
-    @Column(name = "expiry_date", nullable = false)
+    @Indexed
+    private Long userId;
+
     private Instant expiryDate;
 }

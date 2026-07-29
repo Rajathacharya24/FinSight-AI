@@ -105,6 +105,14 @@ public class DocumentService {
             throw new IllegalArgumentException("Only PDF files are supported");
         }
 
+        // Magic byte validation (check for %PDF-)
+        try (InputStream is = file.getInputStream()) {
+            byte[] magic = new byte[5];
+            if (is.read(magic) < 5 || !new String(magic).startsWith("%PDF-")) {
+                throw new IllegalArgumentException("Invalid file format: Not a valid PDF document");
+            }
+        }
+
         // 0.5️⃣ Virus scan
         if (!virusScannerService.scanFile(file)) {
             throw new IllegalArgumentException("File rejected by malware scanner");

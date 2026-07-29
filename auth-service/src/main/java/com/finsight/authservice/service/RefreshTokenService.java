@@ -2,13 +2,10 @@ package com.finsight.authservice.service;
 
 import com.finsight.authservice.exception.TokenRefreshException;
 import com.finsight.authservice.model.RefreshToken;
-import com.finsight.authservice.model.User;
 import com.finsight.authservice.repository.RefreshTokenRepository;
-import com.finsight.authservice.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -17,32 +14,26 @@ import java.util.UUID;
 @Service
 public class RefreshTokenService {
 
-    @Value("${app.jwt.refresh-expiration-ms}")
+    @Value("${app.refreshToken.expirationMs:604800000}")
     private Long refreshTokenDurationMs;
 
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
 
-    @Autowired
-    private UserRepository userRepository;
-
     public Optional<RefreshToken> findByToken(String token) {
         return refreshTokenRepository.findByToken(token);
     }
 
-    @Transactional
     public RefreshToken createRefreshToken(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
-
         // Delete existing refresh token for this user (one per user)
-        refreshTokenRepository.deleteByUser(user);
-        refreshTokenRepository.flush();
+        refreshTokenRepository.deleteByUserId(userId);
 
         RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setUser(user);
+        refreshToken.setUserId(userId);
         refreshToken.setExpiryDate(Instant.now().plusMillis(refreshTokenDurationMs));
-        refreshToken.setToken(UUID.randomUUID().toString());
+        String tokenString = UUID.randomUUID().toString();
+        refreshToken.setId(tokenString); // using token as ID for simpler access
+        refreshToken.setToken(tokenString);
 
         return refreshTokenRepository.save(refreshToken);
     }
@@ -56,10 +47,7 @@ public class RefreshTokenService {
         return token;
     }
 
-    @Transactional
     public void deleteByUserId(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
-        refreshTokenRepository.deleteByUser(user);
+        refreshTokenRepository.deleteByUserId(userId);
     }
 }

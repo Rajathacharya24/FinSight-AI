@@ -82,7 +82,7 @@ html, body, #root {
   /* Nav link */
   .nav-link {
     @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
-           text-slate-400 hover:text-white hover:bg-white/8
+           text-slate-400 hover:text-white hover:bg-white/10
            transition-all duration-200;
   }
   .nav-link.active {
@@ -99,7 +99,7 @@ html, body, #root {
 
   /* Table row */
   .trow {
-    @apply border-t border-white/5 hover:bg-white/4 cursor-pointer transition-colors duration-150;
+    @apply border-t border-white/5 hover:bg-white/5 cursor-pointer transition-colors duration-150;
   }
 }
 

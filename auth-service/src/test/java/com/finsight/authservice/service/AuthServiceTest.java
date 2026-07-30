@@ -80,7 +80,7 @@ class AuthServiceTest {
 
         assertThat(result.getId()).isEqualTo(1L);
         assertThat(result.getUsername()).isEqualTo("testuser");
-        assertThat(result.getRole()).isEqualTo(ERole.ROLE_USER);
+        assertThat(result.getRole()).isEqualTo(ERole.ROLE_APPLICANT);
         verify(userRepository).save(any());
     }
 
@@ -149,11 +149,11 @@ class AuthServiceTest {
         user.setUsername("demo");
         user.setEmail("demo@finsight.ai");
         user.setPassword("encoded");
-        user.setRole(ERole.ROLE_USER);
+        user.setRole(ERole.ROLE_APPLICANT);
 
         RefreshToken rt = new RefreshToken();
         rt.setToken("valid-refresh-token");
-        rt.setUser(user);
+        rt.setUserId(user.getId());
         rt.setExpiryDate(Instant.now().plusSeconds(3600));
 
         when(refreshTokenService.findByToken("valid-refresh-token")).thenReturn(Optional.of(rt));

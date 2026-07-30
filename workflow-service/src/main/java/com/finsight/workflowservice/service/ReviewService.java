@@ -64,7 +64,7 @@ public class ReviewService {
         auditLogService.logCompleted(
                 workflowId,
                 WorkflowStep.RECOMMEND,
-                AgentType.DECISION,
+                AgentType.DECISION_AGENT,
                 "REVIEW_" + request.getAction(),
                 Map.of(
                         "action", request.getAction(),

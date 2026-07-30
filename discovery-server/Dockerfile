@@ -10,6 +10,7 @@ COPY api-gateway/pom.xml ./api-gateway/pom.xml
 COPY workflow-service/pom.xml ./workflow-service/pom.xml
 COPY config-server/pom.xml ./config-server/pom.xml
 COPY discovery-server/pom.xml ./discovery-server/pom.xml
+COPY notification-service/pom.xml ./notification-service/pom.xml
 # Only the service being built needs its source
 COPY discovery-server/src ./discovery-server/src
 RUN mvn -B -ntp -pl discovery-server -am clean package -DskipTests

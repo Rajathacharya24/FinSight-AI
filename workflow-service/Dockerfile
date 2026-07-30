@@ -13,7 +13,7 @@ COPY discovery-server/pom.xml ./discovery-server/pom.xml
 COPY notification-service/pom.xml ./notification-service/pom.xml
 # Only the service being built needs its source
 COPY workflow-service/src ./workflow-service/src
-RUN mvn -B -ntp -pl workflow-service -am clean package -DskipTests
+RUN mvn -B -ntp -pl workflow-service -am clean package -Dmaven.test.skip=true
 
 # ───── runtime stage ─────
 FROM eclipse-temurin:21-jre-alpine

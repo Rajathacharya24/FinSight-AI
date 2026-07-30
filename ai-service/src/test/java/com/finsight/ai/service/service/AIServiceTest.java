@@ -10,6 +10,7 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
+import org.springframework.ai.vectorstore.VectorStore;
 
 import java.util.List;
 
@@ -35,7 +36,7 @@ class AIServiceTest {
         ChatResponse chatResponse = new ChatResponse(List.of(new Generation(new AssistantMessage(json))));
         when(chatModel.call(isA(Prompt.class))).thenReturn(chatResponse);
 
-        AIService service = new AIService(chatClient, repo, new ObjectMapper());
+        AIService service = new AIService(chatClient, repo, new ObjectMapper(), mock(VectorStore.class));
 
         ExtractionResponse out = service.extractAndPersist(42L, "dummy text");
 
@@ -59,7 +60,7 @@ class AIServiceTest {
         ChatResponse chatResponse = new ChatResponse(List.of(new Generation(new AssistantMessage(json))));
         when(chatModel.call(isA(Prompt.class))).thenReturn(chatResponse);
 
-        AIService service = new AIService(chatClient, repo, new ObjectMapper());
+        AIService service = new AIService(chatClient, repo, new ObjectMapper(), mock(VectorStore.class));
 
         ExtractionResponse out = service.extractAndPersist(1L, "no relevant content here");
 

@@ -4,8 +4,8 @@ import { auth } from '../api/client.js';
 import { useAuth } from '../hooks/useAuth.js';
 
 export default function Login() {
-  const [email, setEmail]       = useState('demo@finsight.ai');
-  const [password, setPassword] = useState('demo');
+  const [username, setUsername]  = useState('demo');
+  const [password, setPassword] = useState('demo123');
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
   const { login }               = useAuth();
@@ -16,9 +16,10 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      const { data } = await auth.login(email, password);
+      const { data } = await auth.login(username, password);
       const token = data.token || data.accessToken;
       if (!token) throw new Error('No token in response');
+      if (data.refreshToken) localStorage.setItem('finsight.refreshToken', data.refreshToken);
       login(token);
       navigate('/upload');
     } catch (err) {
@@ -55,16 +56,16 @@ export default function Login() {
           {/* Form */}
           <form id="login-form" onSubmit={handle} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Email</label>
+              <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Username</label>
               <input
-                id="input-email"
+                id="input-username"
                 className="form-input"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                type="email"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="demo"
+                type="text"
                 required
-                autoComplete="email"
+                autoComplete="username"
               />
             </div>
             <div className="space-y-1">
@@ -110,7 +111,7 @@ export default function Login() {
 
           {/* Demo hint */}
           <p className="text-center text-xs text-slate-600">
-            Dev credentials pre-filled · demo@finsight.ai / demo
+            Dev credentials pre-filled · demo / demo123
           </p>
         </div>
       </div>

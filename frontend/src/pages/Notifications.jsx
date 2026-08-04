@@ -1,6 +1,17 @@
 import { useEffect, useState, useCallback } from 'react';
 import { notifications as notificationsApi } from '../api/client.js';
-import { useAuth } from '../hooks/useAuth.js';
+
+// Decode JWT payload to extract user ID (sub claim) without external libraries
+function getUserIdFromToken() {
+  try {
+    const token = localStorage.getItem('finsight.token');
+    if (!token) return null;
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.sub || payload.userId || payload.id || null;
+  } catch {
+    return null;
+  }
+}
 
 function BellIcon({ unread }) {
   return (
@@ -67,8 +78,7 @@ function NotificationItem({ notification, onMarkRead }) {
 }
 
 export default function Notifications() {
-  const { user } = useAuth();
-  const userId = user?.id;
+  const [userId, setUserId] = useState(null);
 
   const [items, setItems]       = useState([]);
   const [unread, setUnread]     = useState(0);
@@ -77,18 +87,33 @@ export default function Notifications() {
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
 
+  // Derive userId from JWT on mount
+  useEffect(() => {
+    const uid = getUserIdFromToken();
+    setUserId(uid);
+  }, []);
+
   const load = useCallback(async (p = 0) => {
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const res = await notificationsApi.getByUser(userId, p, 20);
       const data = res.data;
-      setItems(data.content || []);
+      setItems(data.content || (Array.isArray(data) ? data : []));
       setUnread(data.unreadCount || 0);
       setTotalPages(data.totalPages || 1);
       setPage(data.page || 0);
     } catch (e) {
-      setError(e?.response?.data?.message || e.message);
+      // 404 or empty is fine — notifications may not exist yet
+      if (e?.response?.status === 404) {
+        setItems([]);
+        setUnread(0);
+      } else {
+        setError(e?.response?.data?.message || e.message);
+      }
     } finally {
       setLoading(false);
     }

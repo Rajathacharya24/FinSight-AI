@@ -1,6 +1,6 @@
 <p align="center">
   <strong>⚡ FinSight AI</strong><br/>
-  <em>AI-powered loan application processing platform built on Spring Boot microservices</em>
+  <em>AI-powered loan application processing platform built on Spring Boot microservices application </em>
 </p>
 
 <p align="center">

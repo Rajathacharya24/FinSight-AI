@@ -32,7 +32,7 @@ class AIServiceTest {
         ChatModel chatModel = mock(ChatModel.class);
         ChatClient chatClient = ChatClient.builder(chatModel).build();
 
-        String json = "{\"applicantName\":\"Jane Doe\",\"income\":\"95000\",\"address\":\"742 Evergreen Terrace\",\"loanAmount\":\"180000\"}";
+        String json = "{\"applicantName\":\"Jane Doe\",\"income\":\"95000\",\"address\":\"742 Evergreen Terrace\",\"loanAmount\":\"180000\",\"employmentStatus\":\"EMPLOYED\",\"existingDebts\":\"0\"}";
         ChatResponse chatResponse = new ChatResponse(List.of(new Generation(new AssistantMessage(json))));
         when(chatModel.call(isA(Prompt.class))).thenReturn(chatResponse);
 
@@ -56,7 +56,7 @@ class AIServiceTest {
         ChatModel chatModel = mock(ChatModel.class);
         ChatClient chatClient = ChatClient.builder(chatModel).build();
 
-        String json = "{\"applicantName\":null,\"income\":null,\"address\":null,\"loanAmount\":null}";
+        String json = "{\"applicantName\":null,\"income\":null,\"address\":null,\"loanAmount\":null,\"employmentStatus\":null,\"existingDebts\":null}";
         ChatResponse chatResponse = new ChatResponse(List.of(new Generation(new AssistantMessage(json))));
         when(chatModel.call(isA(Prompt.class))).thenReturn(chatResponse);
 

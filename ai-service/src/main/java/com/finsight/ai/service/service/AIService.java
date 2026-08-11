@@ -42,7 +42,7 @@ public class AIService {
             You are a relevance scoring engine. Score the following text chunk 0-100 for how useful it is
             for extracting these loan application fields: applicant name, income, address, loan amount,
             employment status, existing debts.
-            Return ONLY a JSON object: {"score": <integer 0-100>}
+            Return ONLY a JSON object containing a "score" key with an integer value between 0 and 100.
             
             Chunk:
             {chunk}
@@ -71,8 +71,7 @@ public class AIService {
 
     private static final String CORRECTIVE_PROMPT = """
             Your previous response was not valid JSON or was missing required fields.
-            Return ONLY a valid JSON object with these fields (use null for any missing):
-            {"applicantName": null, "income": null, "address": null, "loanAmount": null, "employmentStatus": null, "existingDebts": null}
+            Return ONLY a valid JSON object with the required fields: applicantName, income, address, loanAmount, employmentStatus, and existingDebts (use null for any missing).
             
             Previous malformed response:
             {previous}

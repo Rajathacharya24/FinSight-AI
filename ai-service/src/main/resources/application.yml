@@ -46,7 +46,7 @@ management:
 
 spring.ai.openai.api-key: ${GROQ_API_KEY:${OPENAI_API_KEY:}}
 spring.ai.openai.base-url: ${GROQ_BASE_URL:${OPENAI_BASE_URL:https://api.groq.com/openai}}
-spring.ai.openai.chat.options.model: ${GROQ_MODEL:${OPENAI_MODEL:llama3-8b-8192}}
+spring.ai.openai.chat.options.model: ${GROQ_MODEL:${OPENAI_MODEL:llama-3.1-8b-instant}}
 spring.ai.openai.chat.options.temperature: 0.1
 spring.ai.vectorstore.pgvector.initialize-schema: true
 spring.ai.vectorstore.pgvector.dimension: 1536

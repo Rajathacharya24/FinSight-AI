@@ -3,7 +3,7 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://postgres:5432/finsight_db?currentSchema=ai
+    url: jdbc:postgresql://postgres:5432/finsight_db?currentSchema=ai,public
     username: finsight_user
     password: finsight_password
     driver-class-name: org.postgresql.Driver

@@ -20,8 +20,8 @@ CREATE TABLE IF NOT EXISTS document_embedding (
     id        UUID PRIMARY KEY,
     content   TEXT,
     metadata  JSONB,
-    embedding VECTOR(1536) -- text-embedding-3-small dimension
+    embedding public.VECTOR(1536) -- text-embedding-3-small dimension
 );
 
 CREATE INDEX IF NOT EXISTS document_embedding_hnsw_idx
-    ON document_embedding USING hnsw (embedding vector_cosine_ops);
+    ON document_embedding USING hnsw (embedding public.vector_cosine_ops);

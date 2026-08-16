@@ -68,7 +68,7 @@ For an in-depth dive into the system design, check out our [Architecture Guide](
 
 ---
 
-## 🛠️ Technology Stack
+## 🛠️ Technology Stack Used
 
 | Category | Technologies |
 | :--- | :--- |

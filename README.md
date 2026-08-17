@@ -19,6 +19,22 @@
 
 ---
 
+## 🎯 Executive Summary (Easy to Explain)
+
+**What does this project do?**
+FinSight AI is a system that reads uploaded financial documents (like PDFs) and automatically extracts the important data from them using AI. 
+
+**How does it work end-to-end?**
+1. **Upload:** A user logs into the web interface and uploads a document.
+2. **Store:** The system safely saves the document.
+3. **Analyze:** The AI reads the document, understands it, and extracts the key information (like names, amounts, and dates).
+4. **Decide:** A workflow engine checks the extracted data and decides what to do next.
+5. **Notify:** The system sends an email to notify you that the processing is complete.
+
+Behind the scenes, we use small, independent programs (called microservices) that talk to each other to handle these steps efficiently.
+
+---
+
 ## ✨ Key Features
 
 - 🧠 **AI-Powered Data Extraction:** Utilizes **Spring AI** and Groq/OpenAI to reliably parse structured data from unstructured financial PDFs.

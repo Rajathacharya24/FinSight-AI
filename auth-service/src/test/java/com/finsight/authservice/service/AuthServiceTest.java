@@ -158,6 +158,7 @@ class AuthServiceTest {
 
         when(refreshTokenService.findByToken("valid-refresh-token")).thenReturn(Optional.of(rt));
         when(refreshTokenService.verifyExpiration(rt)).thenReturn(rt);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(jwtUtils.generateJwtToken(any())).thenReturn("new-access-token");
 
         JwtResponse response = authService.refreshToken("valid-refresh-token");

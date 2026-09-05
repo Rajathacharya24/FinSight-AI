@@ -14,6 +14,14 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.finsight.authservice.model.RefreshToken;
+import com.finsight.authservice.repository.RefreshTokenRepository;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.RedisKeyValueAdapter;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -42,6 +50,15 @@ class AuthControllerIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @MockBean
+    private RefreshTokenRepository refreshTokenRepository;
+
+    @MockBean
+    private RedisConnectionFactory redisConnectionFactory;
+
+    @MockBean
+    private RedisKeyValueAdapter redisKeyValueAdapter;
 
     @Test
     @Order(1)
@@ -75,6 +92,8 @@ class AuthControllerIntegrationTest {
     @Test
     @Order(3)
     void login_shouldReturnTokens() throws Exception {
+        when(refreshTokenRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
         LoginRequest req = new LoginRequest();
         req.setUsername("newuser");
         req.setPassword("password123");

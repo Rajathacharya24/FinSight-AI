@@ -16,11 +16,16 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.finsight.authservice.model.RefreshToken;
 import com.finsight.authservice.repository.RefreshTokenRepository;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
-import org.springframework.data.redis.core.RedisKeyValueAdapter;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
+import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisServerCommands;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -46,6 +51,26 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class AuthControllerIntegrationTest {
 
+    @TestConfiguration
+    static class TestRedisConfig {
+        @Bean
+        @Primary
+        public RedisConnectionFactory redisConnectionFactory() {
+            RedisConnectionFactory factory = mock(RedisConnectionFactory.class);
+            RedisConnection connection = mock(RedisConnection.class);
+            RedisServerCommands serverCommands = mock(RedisServerCommands.class);
+            when(connection.serverCommands()).thenReturn(serverCommands);
+            when(factory.getConnection()).thenReturn(connection);
+            return factory;
+        }
+
+        @Bean
+        @Primary
+        public ReactiveRedisConnectionFactory reactiveRedisConnectionFactory() {
+            return mock(ReactiveRedisConnectionFactory.class);
+        }
+    }
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -54,9 +79,6 @@ class AuthControllerIntegrationTest {
 
     @MockBean
     private RefreshTokenRepository refreshTokenRepository;
-
-    @MockBean
-    private LettuceConnectionFactory redisConnectionFactory;
 
     @Test
     @Order(1)

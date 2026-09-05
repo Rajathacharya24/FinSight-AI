@@ -38,6 +38,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.cloud.compatibility-verifier.enabled=false",
         "eureka.client.enabled=false",
         "management.tracing.enabled=false",
+        "management.health.redis.enabled=false",
         "app.jwt.secret=test-secret-that-is-long-enough-for-hmac-sha256",
         "app.jwt.expiration-ms=3600000",
         "app.jwt.refresh-expiration-ms=604800000"

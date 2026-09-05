@@ -57,9 +57,6 @@ class AuthControllerIntegrationTest {
     @MockBean
     private RedisConnectionFactory redisConnectionFactory;
 
-    @MockBean
-    private RedisKeyValueAdapter redisKeyValueAdapter;
-
     @Test
     @Order(1)
     void register_shouldCreateUser() throws Exception {

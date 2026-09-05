@@ -17,7 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.finsight.authservice.model.RefreshToken;
 import com.finsight.authservice.repository.RefreshTokenRepository;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisKeyValueAdapter;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -56,7 +56,7 @@ class AuthControllerIntegrationTest {
     private RefreshTokenRepository refreshTokenRepository;
 
     @MockBean
-    private RedisConnectionFactory redisConnectionFactory;
+    private LettuceConnectionFactory redisConnectionFactory;
 
     @Test
     @Order(1)

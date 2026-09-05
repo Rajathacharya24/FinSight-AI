@@ -60,6 +60,7 @@ class AuthControllerIntegrationTest {
             RedisConnectionFactory factory = mock(RedisConnectionFactory.class);
             RedisConnection connection = mock(RedisConnection.class);
             RedisServerCommands serverCommands = mock(RedisServerCommands.class);
+            when(serverCommands.getConfig(any())).thenReturn(new java.util.Properties());
             when(connection.serverCommands()).thenReturn(serverCommands);
             when(factory.getConnection()).thenReturn(connection);
             return factory;

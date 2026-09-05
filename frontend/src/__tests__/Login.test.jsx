@@ -35,9 +35,9 @@ describe('Login page', () => {
         <Login />
       </MemoryRouter>
     );
-    expect(screen.getByText('Sign in')).toBeDefined();
-    expect(screen.getByPlaceholderText('Email')).toBeDefined();
-    expect(screen.getByPlaceholderText('Password')).toBeDefined();
+    expect(screen.getByText('Sign in to your console')).toBeDefined();
+    expect(screen.getByPlaceholderText('demo')).toBeDefined();
+    expect(screen.getByPlaceholderText('••••••••')).toBeDefined();
   });
 
   it('has pre-filled demo credentials', () => {
@@ -46,7 +46,7 @@ describe('Login page', () => {
         <Login />
       </MemoryRouter>
     );
-    const emailInput = screen.getByPlaceholderText('Email');
-    expect(emailInput.value).toBe('demo@finsight.ai');
+    const usernameInput = screen.getByPlaceholderText('demo');
+    expect(usernameInput.value).toBe('demo');
   });
 });

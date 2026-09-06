@@ -217,8 +217,8 @@ services:
       test: ["CMD", "wget", "-qO-", "http://localhost:8888/actuator/health"]
       interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 30s
+      retries: 10
+      start_period: 90s
     restart: unless-stopped
     mem_limit: 384m
     cpus: "0.25"
@@ -239,8 +239,8 @@ services:
       test: ["CMD", "wget", "-qO-", "http://localhost:8761/actuator/health"]
       interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 30s
+      retries: 10
+      start_period: 90s
     restart: unless-stopped
     mem_limit: 384m
     cpus: "0.25"
@@ -267,11 +267,11 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
       interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 40s
+      retries: 10
+      start_period: 90s
     restart: unless-stopped
     mem_limit: 512m
     cpus: "0.5"
@@ -307,11 +307,11 @@ services:
       discovery-server:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health"]
       interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 10
+      start_period: 90s
     restart: unless-stopped
     mem_limit: 512m
     cpus: "0.5"
@@ -351,11 +351,11 @@ services:
       kafka:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health"]
       interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 10
+      start_period: 90s
     restart: unless-stopped
     mem_limit: 768m
     cpus: "0.5"
@@ -394,8 +394,8 @@ services:
       test: ["CMD", "wget", "-qO-", "http://localhost:8083/actuator/health"]
       interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 10
+      start_period: 90s
     restart: unless-stopped
     mem_limit: 768m
     cpus: "0.75"
@@ -433,11 +433,11 @@ services:
       ai-service:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health"]
       interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 90s
+      retries: 10
+      start_period: 120s
     restart: unless-stopped
     mem_limit: 640m
     cpus: "0.5"
@@ -479,11 +479,11 @@ services:
       mailpit:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8085/actuator/health"]
       interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 10
+      start_period: 90s
     restart: unless-stopped
     mem_limit: 512m
     cpus: "0.25"

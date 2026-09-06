@@ -53,12 +53,10 @@ docker compose up -d frontend
 
 ### 5. Smoke test
 
-First, generate a sample PDF (or use your own loan application):
+Use the included sample PDF (or your own loan application PDF):
 
 ```bash
-javac infra/scripts/GenSamplePdf.java -d /tmp/classes
-java -cp /tmp/classes GenSamplePdf
-# Creates loan-application-sample.pdf in current directory
+# Sample PDF is available at samples/loan-app.pdf
 ```
 
 Then run the end-to-end workflow:
@@ -74,7 +72,8 @@ echo "Token: $TOKEN"
 curl -X POST http://localhost:8080/api/v1/workflows \
   -H "Authorization: Bearer $TOKEN" \
   -F 'metadata={"title":"Demo Loan"};type=application/json' \
-  -F 'file=@loan-application-sample.pdf'
+  -F 'file=@samples/loan-app.pdf'
+
 
 # Inspect
 curl http://localhost:8080/api/v1/workflows -H "Authorization: Bearer $TOKEN"

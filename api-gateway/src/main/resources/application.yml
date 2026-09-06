@@ -5,7 +5,10 @@ spring:
     import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
 
   cloud:
+    compatibility-verifier:
+      enabled: false
     gateway:
+
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials
       globalcors:

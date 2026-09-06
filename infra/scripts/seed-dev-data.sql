@@ -9,6 +9,8 @@
 -- Demo users are inserted by the auth-service V3 migration.
 -- This file seeds workflow and document data for UI testing.
 
+SET search_path TO workflow, auth, document, public;
+
 -- ─── Demo Workflows ──────────────────────────────────────────────────────
 INSERT INTO workflow_instances (document_id, user_id, status, current_step, created_at, updated_at)
 VALUES

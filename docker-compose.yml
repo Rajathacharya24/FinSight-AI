@@ -150,7 +150,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro,z
       - prometheusdata:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -176,8 +176,9 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
     volumes:
       - grafanadata:/var/lib/grafana
-      - ./infra/grafana/provisioning:/etc/grafana/provisioning
-      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro,z
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro,z
+
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health"]
       interval: 15s

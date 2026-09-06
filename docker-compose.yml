@@ -259,6 +259,8 @@ services:
       SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
       JWT_SECRET: ${JWT_SECRET}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      REDIS_HOST: finsight-redis
+      REDIS_PORT: 6379
     depends_on:
       config-server:
         condition: service_healthy

@@ -1,72 +1,44 @@
+server:
+  port: 8081
+
 spring:
-  cloud:
-    compatibility-verifier:
-      enabled: false
   application:
     name: auth-service
   config:
-    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
-
-
+    import: optional:configserver:http://localhost:8888
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/auth_db}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
 
-  datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:finsight_db}
-    username: ${DB_USER:finsight_user}
-    password: ${DB_PASSWORD:finsight_password}
-    driver-class-name: org.postgresql.Driver
-
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-
-  flyway:
-    enabled: true
-    baseline-on-migrate: true
-    schemas: auth
-    create-schemas: true
-    default-schema: auth
-    locations: classpath:db/migration
-
-server:
-  port: ${SERVER_PORT:8081}
+jwt:
+  secret: ${JWT_SECRET:FinsightAISecretKeyMustBeAtLeast32BytesLongForHS256AlgorithmSecurity}
+  expiration-ms: 86400000
 
 eureka:
   client:
-    service-url:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+    serviceUrl:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics,prometheus
-  endpoint:
-    health:
-      show-details: always
-  metrics:
-    tags:
-      application: ${spring.application.name}
-  tracing:
-    sampling:
-      probability: 1.0
-  zipkin:
-    tracing:
-      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
-
-app:
-  jwt:
-    secret: ${JWT_SECRET}
-    expirationMs: ${JWT_EXPIRATION_MS:86400000}
-  refreshToken:
-    expirationMs: ${REFRESH_TOKEN_EXPIRATION_MS:604800000}
-
-logging:
-  pattern:
-    level: "%5p [${spring.application.name},%X{traceId:-},%X{spanId:-}]"

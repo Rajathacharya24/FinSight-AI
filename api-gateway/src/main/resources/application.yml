@@ -1,86 +1,73 @@
+server:
+  port: 8080
+
 spring:
   application:
     name: api-gateway
-  config:
-    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
-
   cloud:
-    compatibility-verifier:
-      enabled: false
     gateway:
-
-      default-filters:
-        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials
       globalcors:
         cors-configurations:
           '[/**]':
-            # env-driven for prod: set CORS_ALLOWED_ORIGINS=https://your-domain.com
-            allowedOriginPatterns: "${CORS_ALLOWED_ORIGINS:http://localhost:3000}"
-            allowedMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+            allowedOrigins:
+              - "http://localhost:3000"
+              - "http://localhost:5173"
+              - "http://127.0.0.1:3000"
+              - "http://127.0.0.1:5173"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
             allowedHeaders: "*"
-            exposedHeaders: ["X-Trace-Id"]
             allowCredentials: true
-            maxAge: 3600
       routes:
         - id: auth-service
-          uri: http://${AUTH_SERVICE_HOST:auth-service}:${AUTH_SERVICE_PORT:8081}
+          uri: lb://auth-service
           predicates:
             - Path=/api/v1/auth/**
           filters:
-            - RewritePath=/api/v1/auth/(?<segment>.*), /auth/${segment}
+            - JwtAuthenticationFilter
 
         - id: document-service
-          uri: http://${DOCUMENT_SERVICE_HOST:document-service}:${DOCUMENT_SERVICE_PORT:8082}
+          uri: lb://document-service
           predicates:
             - Path=/api/v1/documents/**
+          filters:
+            - JwtAuthenticationFilter
 
         - id: ai-service
-          uri: http://${AI_SERVICE_HOST:ai-service}:${AI_SERVICE_PORT:8083}
+          uri: lb://ai-service
           predicates:
             - Path=/api/v1/ai/**
+          filters:
+            - JwtAuthenticationFilter
 
         - id: workflow-service
-          uri: http://${WORKFLOW_SERVICE_HOST:workflow-service}:${WORKFLOW_SERVICE_PORT:8084}
+          uri: lb://workflow-service
           predicates:
-            - Path=/api/v1/workflows/**,/api/v1/analytics/**
+            - Path=/api/v1/workflow/**
+          filters:
+            - JwtAuthenticationFilter
 
         - id: notification-service
-          uri: http://${NOTIFICATION_SERVICE_HOST:notification-service}:${NOTIFICATION_SERVICE_PORT:8085}
+          uri: lb://notification-service
           predicates:
             - Path=/api/v1/notifications/**
+          filters:
+            - JwtAuthenticationFilter
 
-server:
-  port: ${SERVER_PORT:8080}
+jwt:
+  secret: ${JWT_SECRET:FinsightAISecretKeyMustBeAtLeast32BytesLongForHS256AlgorithmSecurity}
 
 eureka:
   client:
-    service-url:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+    serviceUrl:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus,gateway
-  endpoint:
-    health:
-      show-details: always
-  metrics:
-    tags:
-      application: ${spring.application.name}
-  tracing:
-    sampling:
-      probability: 1.0
-  zipkin:
-    tracing:
-      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
-
-logging:
-  pattern:
-    level: "%5p [${spring.application.name},%X{traceId:-},%X{spanId:-}]"
-
-# JWT secret for gateway-level token validation
-# Must match the secret used by auth-service to sign tokens
-app:
-  jwt:
-    secret: ${JWT_SECRET}
+        include: health,info,metrics,prometheus

@@ -7,15 +7,18 @@ spring:
   profiles:
     active: native
   cloud:
-    compatibility-verifier:
-      enabled: false
     config:
       server:
         native:
           search-locations: classpath:/config
 
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics,prometheus

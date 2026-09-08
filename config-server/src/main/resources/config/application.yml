@@ -1,11 +1,9 @@
-eureka:
-  client:
-    service-url:
-      defaultZone: http://discovery-server:8761/eureka/
-    register-with-eureka: true
-    fetch-registry: true
-  instance:
-    prefer-ip-address: true
+spring:
+  zipkin:
+    base-url: ${ZIPKIN_URL:http://localhost:9411}
+  tracing:
+    sampling:
+      probability: 1.0
 
 management:
   endpoints:
@@ -15,20 +13,7 @@ management:
   endpoint:
     health:
       show-details: always
-    prometheus:
-      enabled: true
-
-spring:
-  jackson:
-    serialization:
-      write-dates-as-timestamps: false
-
-logging:
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-  level:
-    root: INFO
-    com.finsight: DEBUG
-    org.springframework.security: INFO
-    org.hibernate.SQL: DEBUG
-
+  prometheus:
+    metrics:
+      export:
+        enabled: true

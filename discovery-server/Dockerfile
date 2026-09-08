@@ -1,25 +1,5 @@
-# ───── build stage ─────
-FROM maven:3.9-eclipse-temurin-21 AS build
-WORKDIR /build
-# Copy parent pom + every module's pom so the reactor resolves
-COPY pom.xml ./pom.xml
-COPY auth-service/pom.xml ./auth-service/pom.xml
-COPY document-service/pom.xml ./document-service/pom.xml
-COPY ai-service/pom.xml ./ai-service/pom.xml
-COPY api-gateway/pom.xml ./api-gateway/pom.xml
-COPY workflow-service/pom.xml ./workflow-service/pom.xml
-COPY config-server/pom.xml ./config-server/pom.xml
-COPY discovery-server/pom.xml ./discovery-server/pom.xml
-COPY notification-service/pom.xml ./notification-service/pom.xml
-# Only the service being built needs its source
-COPY discovery-server/src ./discovery-server/src
-RUN mvn -B -ntp -pl discovery-server -am clean package -Dmaven.test.skip=true
-
-# ───── runtime stage ─────
 FROM eclipse-temurin:21-jre-alpine
-RUN apk add --no-cache curl wget
 WORKDIR /app
-COPY --from=build /build/discovery-server/target/*.jar app.jar
+COPY target/discovery-server-1.0.0-SNAPSHOT.jar app.jar
 EXPOSE 8761
-ENTRYPOINT ["java","-jar","/app/app.jar"]
-
+ENTRYPOINT ["java", "-jar", "app.jar"]

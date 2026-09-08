@@ -3,7 +3,8 @@ package com.finsight.ai.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finsight.ai.dto.ExtractionDto;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -17,8 +18,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
-@Slf4j
 public class GroqLlmService {
+
+    private static final Logger log = LoggerFactory.getLogger(GroqLlmService.class);
 
     @Value("${groq.api.key:${GROQ_API_KEY:}}")
     private String groqApiKey;
@@ -92,7 +94,6 @@ public class GroqLlmService {
         JsonNode root = objectMapper.readTree(responseJson);
         String content = root.path("choices").get(0).path("message").path("content").asText();
 
-        // Extract JSON block if surrounded by markdown
         if (content.contains("```json")) {
             content = content.substring(content.indexOf("```json") + 7);
             if (content.contains("```")) {

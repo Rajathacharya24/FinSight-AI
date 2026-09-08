@@ -2,19 +2,22 @@ package com.finsight.ai.service;
 
 import com.finsight.ai.domain.DocumentChunk;
 import com.finsight.ai.repository.DocumentChunkRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
-@Slf4j
-@RequiredArgsConstructor
 public class VectorEmbeddingService {
 
+    private static final Logger log = LoggerFactory.getLogger(VectorEmbeddingService.class);
     private final DocumentChunkRepository chunkRepository;
+
+    public VectorEmbeddingService(DocumentChunkRepository chunkRepository) {
+        this.chunkRepository = chunkRepository;
+    }
 
     public void processAndStoreDocumentChunks(String documentId, String text) {
         if (text == null || text.isBlank()) return;
@@ -40,7 +43,6 @@ public class VectorEmbeddingService {
         if (chunks.isEmpty()) {
             return List.of();
         }
-        // Simple TF-IDF / Keyword relevance filter for semantic match
         String[] keywords = query.toLowerCase().split("\\s+");
         return chunks.stream()
                 .filter(chunk -> {

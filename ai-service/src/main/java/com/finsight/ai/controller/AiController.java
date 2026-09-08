@@ -6,17 +6,20 @@ import com.finsight.ai.dto.RagQueryResponse;
 import com.finsight.ai.repository.LoanExtractionRepository;
 import com.finsight.ai.service.RagService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/ai")
-@RequiredArgsConstructor
 public class AiController {
 
     private final LoanExtractionRepository extractionRepository;
     private final RagService ragService;
+
+    public AiController(LoanExtractionRepository extractionRepository, RagService ragService) {
+        this.extractionRepository = extractionRepository;
+        this.ragService = ragService;
+    }
 
     @GetMapping("/extractions/{documentId}")
     public ResponseEntity<LoanApplicationExtraction> getExtraction(@PathVariable String documentId) {

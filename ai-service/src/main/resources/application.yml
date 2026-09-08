@@ -1,19 +1,20 @@
+server:
+  port: 8083
+
 spring:
-  cloud:
-    compatibility-verifier:
-      enabled: false
   application:
     name: ai-service
   config:
-    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
-
+    import: optional:configserver:http://localhost:8888
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:finsight_db}
-    username: ${DB_USER:finsight_user}
-    password: ${DB_PASSWORD:finsight_password}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/ai_db}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: validate
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -21,40 +22,31 @@ spring:
     enabled: true
     baseline-on-migrate: true
     locations: classpath:db/migration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ai-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
-server:
-  port: ${SERVER_PORT:8083}
+groq:
+  api:
+    key: ${GROQ_API_KEY:}
+  model: ${GROQ_MODEL:llama-3.3-70b-versatile}
 
 eureka:
   client:
-    service-url:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
+    serviceUrl:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics,prometheus
-  endpoint:
-    health:
-      show-details: always
-  metrics:
-    tags:
-      application: ${spring.application.name}
-  tracing:
-    sampling:
-      probability: 1.0
-  zipkin:
-    tracing:
-      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
-
-spring.ai.openai.api-key: ${GROQ_API_KEY:${OPENAI_API_KEY:}}
-spring.ai.openai.base-url: ${GROQ_BASE_URL:${OPENAI_BASE_URL:https://api.groq.com/openai}}
-spring.ai.openai.chat.options.model: ${GROQ_MODEL:${OPENAI_MODEL:llama-3.1-8b-instant}}
-spring.ai.openai.chat.options.temperature: 0.1
-spring.ai.vectorstore.pgvector.initialize-schema: true
-spring.ai.vectorstore.pgvector.dimension: 1536
-
-logging:
-  pattern:
-    level: "%5p [${spring.application.name},%X{traceId:-},%X{spanId:-}]"

@@ -1,232 +1,171 @@
-<div align="center">
-  
-  # ⚡ FinSight AI
+# FinSight AI — Enterprise Financial Document Intelligence Platform
 
-  **Enterprise-Grade AI-Powered Financial Document Intelligence Platform**
-
-  [![Java 21](https://img.shields.io/badge/Java-21-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://jdk.java.net/21/)
-  [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
-  [![React 18](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
-  [![Apache Kafka](https://img.shields.io/badge/Kafka-Streaming-231F20?style=for-the-badge&logo=apachekafka&logoColor=white)](https://kafka.apache.org/)
-  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL+pgvector-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
-  [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-</div>
-
-<br/>
-
-> **FinSight AI** automates the end-to-end processing of complex financial documents (like loan applications). By leveraging modern AI extraction techniques, robust event-driven microservices, and enterprise compliance rules, it transforms unstructured PDFs into structured, actionable intelligence—in seconds.
+**FinSight AI** is a production-grade, event-driven microservices platform built with Java 21, Spring Boot 3.4, Spring Cloud, Apache Kafka, Spring AI, PostgreSQL (with pgvector), MinIO, Redis, and React 18.
 
 ---
 
-## 🎯 Executive Summary (Easy to Explain)
-
-**What does this project do?**
-FinSight AI is a system that reads uploaded financial documents (like PDFs) and automatically extracts the important data from them using AI. 
-
-**How does it work end-to-end?**
-1. **Upload:** A user logs into the web interface and uploads a document.
-2. **Store:** The system safely saves the document.
-3. **Analyze:** The AI reads the document, understands it, and extracts the key information (like names, amounts, and dates).
-4. **Decide:** A workflow engine checks the extracted data and decides what to do next.
-5. **Notify:** The system sends an email to notify you that the processing is complete.
-
-Behind the scenes, we use small, independent programs (called microservices) that talk to each other to handle these steps efficiently.
-
----
-
-## ✨ Key Features
-
-- 🧠 **AI-Powered Data Extraction:** Utilizes **Spring AI** and Groq/OpenAI to reliably parse structured data from unstructured financial PDFs.
-- 🚀 **Event-Driven Architecture:** Highly scalable, decoupled microservices orchestrated via **Apache Kafka**.
-- 🛡️ **Enterprise Security & Compliance:** Built-in JWT authentication, role-based access, and automated compliance validation checks.
-- 📊 **Comprehensive Observability:** Fully instrumented with **Micrometer, Zipkin, Prometheus, and Grafana** for deep tracing and monitoring.
-- ⚡ **Resilient Processing:** Designed for failure with **Resilience4j** circuit breakers, retry mechanisms, and Dead Letter Queues (DLQ).
-- 💻 **Modern UI/UX:** A sleek, responsive React 18 SPA utilizing Tailwind CSS and Vite, featuring dark mode and glassmorphism design patterns.
-
----
-
-## 🏗️ Architecture
-
-FinSight AI employs a modern, loosely-coupled microservices pattern. 
+## 🏛 System Architecture
 
 ```mermaid
-graph TD
-    Client[Browser UI / React] -->|HTTPS| Gateway[API Gateway :8080]
-    
-    Gateway --> Auth[Auth Service :8081]
-    Gateway --> Workflow[Workflow Service :8084]
-    Gateway --> Doc[Document Service :8082]
-    
-    Workflow -->|Upload Event| Kafka[Apache Kafka]
-    Doc -.->|Stores PDF| MinIO[(MinIO Object Storage)]
-    
-    Kafka -->|Extract| AI[AI Service :8083]
-    AI -.->|Embeddings| Postgres[(Postgres + pgvector)]
-    AI -.->|LLM Call| LLM[Groq / OpenAI]
-    
-    Kafka -->|Decision| Workflow
-    Workflow -->|Notify| Notify[Notification Service :8085]
-    
-    Notify -.->|Email| Mailpit[Mailpit]
-    
-    subgraph Observability
-        Prometheus[Prometheus]
-        Grafana[Grafana]
-        Zipkin[Zipkin Tracing]
+flowchart TD
+    User([User / Browser]) -->|HTTP / React UI :3000| Gateway[API Gateway :8080]
+
+    subgraph Service Mesh & Discovery
+        Eureka[Eureka Discovery Server :8761]
+        Config[Spring Cloud Config Server :8888]
     end
-    
-    Workflow -.-> Zipkin
-    Auth -.-> Zipkin
+
+    subgraph Core Event-Driven Microservices
+        Gateway -->|JWT Auth & Route| Auth[Auth Service :8081]
+        Gateway -->|Route| Doc[Document Service :8082]
+        Gateway -->|Route| AI[AI Service :8083]
+        Gateway -->|Route| WF[Workflow Service :8084]
+        Gateway -->|Route| Notif[Notification Service :8085]
+    end
+
+    subgraph Storage & Infrastructure
+        Redis[(Redis :6379 Rate Limiter)]
+        PG_Auth[(PostgreSQL auth_db)]
+        PG_Doc[(PostgreSQL document_db)]
+        PG_AI[(PostgreSQL + pgvector ai_db)]
+        PG_WF[(PostgreSQL workflow_db)]
+        PG_Notif[(PostgreSQL notification_db)]
+        MinIO[(MinIO S3 PDF Storage :9000)]
+        Kafka{{Apache Kafka Message Broker :9092}}
+        Mailpit[Mailpit SMTP Server :1025 / Web :8025]
+    end
+
+    Auth --> Redis
+    Auth --> PG_Auth
+    Doc --> MinIO
+    Doc --> PG_Doc
+    Doc -->|DocumentUploadedEvent| Kafka
+
+    Kafka -->|Consume Upload| AI
+    AI -->|Groq API / Spring AI| Groq[Groq LLM]
+    AI -->|Embeddings & RAG| PG_AI
+    AI -->|AIExtractionCompletedEvent| Kafka
+
+    Kafka -->|Consume Extraction| WF
+    WF -->|Multi-Agent Execution Pipeline| WF
+    WF --> PG_WF
+    WF -->|WorkflowCompletedEvent| Kafka
+
+    Kafka -->|Consume Workflow Event| Notif
+    Notif --> Mailpit
+    Notif --> PG_Notif
+
+    subgraph Observability
+        Prometheus[Prometheus :9090]
+        Grafana[Grafana :3000]
+        Zipkin[Zipkin :9411 Tracing]
+    end
+
+    Gateway -.-> Zipkin
+    Doc -.-> Prometheus
+    AI -.-> Prometheus
+    WF -.-> Prometheus
 ```
 
-For an in-depth dive into the system design, check out our [Architecture Guide](./ARCHITECTURE.md).
+---
+
+## 🚀 Microservices Breakdown
+
+1. **`discovery-server` (Port 8761)**: Eureka service registry & discovery.
+2. **`config-server` (Port 8888)**: Spring Cloud Config Server providing centralized environment configurations.
+3. **`api-gateway` (Port 8080)**: Spring Cloud Gateway with reactive JWT authentication filtering, CORS configuration, correlation ID propagation, and dynamic routing.
+4. **`auth-service` (Port 8081)**: User registration, login, BCrypt password encoding, JWT token generation, refresh tokens, and Redis-backed login rate-limiting.
+5. **`document-service` (Port 8082)**: PDF file upload validation, MinIO object storage, Apache PDFBox raw text extraction, and publishing `DocumentUploadedEvent` to Kafka.
+6. **`ai-service` (Port 8083)**: Groq LLM structured extraction (`borrowerName`, `loanAmount`, `annualIncome`, `applicationDate`, `loanPurpose`, `employmentStatus`, `confidenceScore`), pgvector text chunk embeddings, and RAG document search endpoint (`POST /api/v1/ai/documents/{id}/query`).
+7. **`workflow-service` (Port 8084)**: Multi-Agent underwriting execution pipeline (`DocumentAnalyzerAgent` → `ComplianceAgent` → `DecisionAgent`), state transitions (`APPROVED`, `REJECTED`, `NEEDS_REVIEW`), audit trail persistence, manual review override, and analytics endpoints.
+8. **`notification-service` (Port 8085)**: Consumes workflow completion events, generates HTML email notifications, dispatches emails to Mailpit SMTP, and records notification logs.
+9. **`frontend` (Port 3000)**: Enterprise React 18 dashboard built with Vite, Tailwind CSS, Axios, and Recharts.
 
 ---
 
-## 🛠️ Technology Stack Used
+## 🔑 Demo Account Credentials
 
-| Category | Technologies |
-| :--- | :--- |
-| **Backend Core** | Java 21, Spring Boot 3.5, Spring Cloud (Gateway, Config, Eureka) |
-| **AI & Data** | Spring AI, PostgreSQL 16, pgvector, Flyway |
-| **Messaging & Storage** | Apache Kafka, Redis, MinIO (S3-compatible) |
-| **Security & Resiliency** | Spring Security, JWT, Resilience4j |
-| **Observability** | Micrometer, Zipkin, Prometheus, Grafana |
-| **Frontend** | React 18, Vite, Tailwind CSS, Recharts, Axios |
-| **DevOps & Infrastructure** | Docker, Docker Compose, GitHub Actions |
+| Account | Username | Password | Role |
+| :--- | :--- | :--- | :--- |
+| Demo User | `demo` | `demo123` | `USER` |
 
 ---
 
-## 🚀 Getting Started
+## 💻 Quick Start with Docker Compose
 
 ### Prerequisites
+- Docker & Docker Compose
+- Maven (optional for manual jar packaging)
 
-You only need two things installed locally to run the entire stack:
-1. **Docker** (v24+) & **Docker Compose** (v2+)
-2. **Groq API Key** (Get one for free at [console.groq.com](https://console.groq.com))
-
-> **Note:** You do **not** need Java, Node.js, or Maven installed locally to run the platform! Everything is containerized.
-
-### Quick Start (Local Deployment)
-
-**1. Clone the repository:**
+### Launch Entire Platform
 ```bash
+# 1. Clone repository
 git clone https://github.com/Rajathacharya24/FinSight-AI.git
 cd FinSight-AI
-```
 
-**2. Configure your Environment:**
-```bash
-cp .env.example .env
-```
-Open `.env` and set your secure variables:
-```env
-# Generate a secure JWT secret
-JWT_SECRET=$(openssl rand -base64 48 | tr -d '\n')
+# 2. Build Java microservices
+mvn clean package -DskipTests
 
-# Paste your Groq API key here
-GROQ_API_KEY=gsk_your_actual_key_here
-```
-
-**3. Fire it up!** 🚀
-```bash
-# This builds 8 Java microservices, the React app, and starts all infra databases
+# 3. Build & launch Docker containers
 docker compose up --build -d
 ```
-*(Grab a coffee ☕ — the first build takes 5-10 minutes to resolve Maven dependencies. Subsequent starts are lightning fast!)*
 
-**4. Verify Health:**
-```bash
-# Check if API gateway is routing
-curl http://localhost:8080/actuator/health
-```
-
-### 🎯 Access the Platform
-
-Once healthy, explore the FinSight AI ecosystem:
-
-| Service | URL | Default Credentials |
-| :--- | :--- | :--- |
-| **FinSight Web UI** | [http://localhost:3000](http://localhost:3000) | `demo` / `demo123` |
-| **API Gateway** | `http://localhost:8080` | N/A |
-| **Eureka Registry** | `http://localhost:8761` | N/A |
-| **Grafana Dashboards** | `http://localhost:3001` | `admin` / `admin` |
-| **Zipkin Tracing** | `http://localhost:9411` | N/A |
-| **MinIO Console** | `http://localhost:9001` | `minioadmin` / `minioadmin` |
-| **Mailpit (Emails)** | `http://localhost:8025` | N/A |
-
-For detailed deployment strategies (including CI/CD and Production hardening), see the [Deployment Guide](./DEPLOYMENT.md).
+### Access Platform Endpoints
+- **React Frontend**: `http://localhost:3000`
+- **API Gateway**: `http://localhost:8080`
+- **Eureka Dashboard**: `http://localhost:8761`
+- **Mailpit Email UI**: `http://localhost:8025`
+- **MinIO Console**: `http://localhost:9001` (user: `minioadmin` / pass: `minioadmin`)
+- **Prometheus**: `http://localhost:9090`
+- **Grafana**: `http://localhost:3000`
+- **Zipkin Tracing**: `http://localhost:9411`
 
 ---
 
-## 📖 API Usage Example
-
-FinSight AI provides a rich RESTful API. Here is a quick example of authenticating and submitting a document for processing.
-
-**1. Authenticate & Get JWT**
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"demo","password":"demo123"}'
-  
-# Extract the token from the response
-TOKEN="Bearer <your-jwt-token>"
-```
-
-**2. Process a Loan Application**
-```bash
-curl -X POST http://localhost:8080/api/v1/workflows \
-  -H "Authorization: $TOKEN" \
-  -F 'metadata={"title":"Mortgage Application","description":"John Doe"};type=application/json' \
-  -F 'file=@/path/to/loan-document.pdf;type=application/pdf'
-```
-
----
-
-## 📂 Repository Structure
-
-The monorepo is thoughtfully structured by domain context:
+## ⚡ Asynchronous Event Flow
 
 ```text
-FinSight-AI/
-├── api-gateway/           # Edge routing, CORS, JWT validation
-├── auth-service/          # Identity provider, RBAC, Redis rate-limiting
-├── document-service/      # Ingestion, OCR, PDFBox, MinIO persistence
-├── ai-service/            # Spring AI, pgvector RAG, LLM integration
-├── workflow-service/      # Kafka orchestration, state machine, circuit breakers
-├── notification-service/  # Async alerts, webhooks, SMTP/Mailpit
-├── config-server/         # Distributed Git-backed configuration
-├── discovery-server/      # Netflix Eureka service registry
-├── frontend/              # React 18, Vite, Tailwind CSS SPA
-├── infra/                 # Grafana dashboards, Prometheus configs, scripts
-└── docker-compose.yml     # Local orchestration manifest
+User PDF Upload
+     ↓
+Document Service (Stores in MinIO & Postgres)
+     ↓ (Publishes DocumentUploadedEvent)
+Kafka Topic: document-uploaded-topic
+     ↓
+AI Service (Parses JSON DTO via Groq + Stores Chunks in pgvector)
+     ↓ (Publishes AIExtractionCompletedEvent)
+Kafka Topic: ai-extraction-completed-topic
+     ↓
+Workflow Service (Executes 3-Agent Compliance Pipeline & Audit Log)
+     ↓ (Publishes WorkflowCompletedEvent)
+Kafka Topic: workflow-completed-topic
+     ↓
+Notification Service (Renders HTML Email & Sends to Mailpit SMTP)
 ```
 
 ---
 
-## 🤝 Contributing
+## 🔍 Retrieval-Augmented Generation (RAG) Architecture
 
-We welcome contributions from the community! Whether you are fixing a bug, enhancing AI capabilities, or improving documentation, your help is appreciated.
-
-Please review our [Contributing Guidelines](./CONTRIBUTING.md) to understand our:
-- Local Development Setup (Running services bare-metal)
-- Branching Strategy (`feat/*`, `fix/*`, `chore/*`)
-- Conventional Commits requirement
-- Pull Request Workflow
+`ai-service` implements RAG for semantic financial document Q&A:
+1. **Text Chunking**: PDF text is partitioned into overlapping semantic chunks.
+2. **Vector Storage**: Text chunks and vector embeddings are stored in PostgreSQL using the `pgvector` extension.
+3. **Query Retrieval**: When a user queries `/api/v1/ai/documents/{documentId}/query`, the top relevant context chunks are fetched via vector similarity.
+4. **Contextual LLM Generation**: The retrieved context and question are formatted into an augmented prompt sent to Groq / Spring AI ChatModel.
 
 ---
 
-## 🛡️ Security Vulnerabilities
+## 🧪 Testing
 
-If you discover a security vulnerability within FinSight AI, please refer to our [Security Policy](./SECURITY.md) and disclose it responsibly.
+```bash
+# Run unit & integration tests
+mvn test
+```
 
 ---
 
-## 📄 License
+## 🛡 Security & Resilience
 
-Distributed under the **MIT License**. See `LICENSE` for more information.
-
-<p align="center">
-  Built with ❤️ by the FinSight AI Open Source Community.
-</p>
+- JWT stateless authentication enforced across API Gateway routes.
+- BCrypt password hashing for stored credentials.
+- Redis key expiration rate-limiting against brute force logins.
+- Resilience4j circuit breaking and timeouts on synchronous service calls.

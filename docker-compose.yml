@@ -1,515 +1,275 @@
 version: '3.8'
 
 services:
-  # ─────────────── Data Stores ───────────────
+  # --- INFRASTRUCTURE SERVICES ---
   postgres:
     image: pgvector/pgvector:pg16
     container_name: finsight-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: finsight_db
     ports:
       - "5432:5432"
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-finsight_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-finsight_password}
-      POSTGRES_DB: ${POSTGRES_DB:-finsight_db}
     volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./infra/postgres/init:/docker-entrypoint-initdb.d:z
+      - ./infra/postgres/init-databases.sh:/docker-entrypoint-initdb.d/init-databases.sh
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-finsight_user} -d ${POSTGRES_DB:-finsight_db}"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 10s
-    restart: unless-stopped
-    mem_limit: 512m
-    cpus: "0.5"
+    networks:
+      - finsight-network
 
   redis:
-    image: redis:7.2-alpine
+    image: redis:7-alpine
     container_name: finsight-redis
     ports:
       - "6379:6379"
-    volumes:
-      - redisdata:/data
-    command: redis-server --appendonly yes
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
-    mem_limit: 128m
-    cpus: "0.25"
+    networks:
+      - finsight-network
 
-  # ─────────────── Object Storage ───────────────
-  minio:
-    image: minio/minio:latest
-    container_name: finsight-minio
-    ports:
-      - "9000:9000"   # S3 API
-      - "9001:9001"   # MinIO Console
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
-    volumes:
-      - miniodata:/data
-    command: server /data --console-address ":9001"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 10s
-    restart: unless-stopped
-    mem_limit: 512m
-    cpus: "0.5"
-
-  # ─────────────── Mail (local dev) ───────────────
-  mailpit:
-    image: axllent/mailpit:latest
-    container_name: finsight-mailpit
-    ports:
-      - "1025:1025"   # SMTP
-      - "8025:8025"   # Web UI
-    environment:
-      MP_SMTP_AUTH_ACCEPT_ANY: "true"
-      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8025/api/v1/info"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    mem_limit: 64m
-    cpus: "0.1"
-
-  # ─────────────── Messaging ───────────────
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: finsight-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    healthcheck:
-      test: ["CMD-SHELL", "echo ruok | nc localhost 2181"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    mem_limit: 256m
-    cpus: "0.25"
+    networks:
+      - finsight-network
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: finsight-kafka
     ports:
       - "9092:9092"
-    depends_on:
-      zookeeper:
-        condition: service_healthy
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      # PLAINTEXT: external (host) access; PLAINTEXT_INTERNAL: cross-container access
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-    healthcheck:
-      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:29092 --list"]
-      interval: 20s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    restart: unless-stopped
-    mem_limit: 768m
-    cpus: "0.5"
-
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: finsight-kafka-ui
-    ports:
-      - "8090:8080"
     depends_on:
-      kafka:
-        condition: service_healthy
-    environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
-    restart: unless-stopped
-    mem_limit: 256m
-    cpus: "0.25"
+      - zookeeper
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9092 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - finsight-network
 
-  # ─────────────── Observability ───────────────
+  minio:
+    image: minio/minio:RELEASE.2024-01-16T16-07-38Z
+    container_name: finsight-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - finsight-network
+
+  mailpit:
+    image: axllent/mailpit:v1.14
+    container_name: finsight-mailpit
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+    networks:
+      - finsight-network
+
+  zipkin:
+    image: openzipkin/zipkin:3
+    container_name: finsight-zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - finsight-network
+
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.50.0
     container_name: finsight-prometheus
     ports:
       - "9090:9090"
     volumes:
-      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro,z
-      - prometheusdata:/prometheus
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.retention.time=7d"
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    mem_limit: 512m
-    cpus: "0.25"
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - finsight-network
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:10.3.1
     container_name: finsight-grafana
     ports:
-      - "3001:3000"
-    depends_on:
-      - prometheus
-    environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
-    volumes:
-      - grafanadata:/var/lib/grafana
-      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro,z
-      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro,z
+      - "3000:3000"
+    networks:
+      - finsight-network
 
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    mem_limit: 256m
-    cpus: "0.25"
-
-  zipkin:
-    image: openzipkin/zipkin:latest
-    container_name: finsight-zipkin
+  # --- MICROSERVICES PLATFORM ---
+  discovery-server:
+    build: ./discovery-server
+    container_name: discovery-server
     ports:
-      - "9411:9411"
+      - "8761:8761"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:9411/health"]
-      interval: 15s
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8761/actuator/health || exit 1"]
+      interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
-    mem_limit: 256m
-    cpus: "0.25"
+    networks:
+      - finsight-network
 
-  # ─────────────── Infrastructure ───────────────
   config-server:
-    build:
-      context: .
-      dockerfile: config-server/Dockerfile
-    container_name: finsight-config-server
+    build: ./config-server
+    container_name: config-server
     ports:
       - "8888:8888"
     environment:
-      SPRING_PROFILES_ACTIVE: native
-      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8888/actuator/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 90s
-    restart: unless-stopped
-    mem_limit: 384m
-    cpus: "0.25"
-
-  discovery-server:
-    build:
-      context: .
-      dockerfile: discovery-server/Dockerfile
-    container_name: finsight-discovery-server
-    ports:
-      - "8761:8761"
-    environment:
-      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
     depends_on:
-      config-server:
+      discovery-server:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8761/actuator/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 90s
-    restart: unless-stopped
-    mem_limit: 384m
-    cpus: "0.25"
+    networks:
+      - finsight-network
 
   api-gateway:
-    build:
-      context: .
-      dockerfile: api-gateway/Dockerfile
-    container_name: finsight-api-gateway
+    build: ./api-gateway
+    container_name: api-gateway
     ports:
       - "8080:8080"
     environment:
-      CONFIG_SERVER_URL: http://config-server:8888
-      EUREKA_URL: http://discovery-server:8761/eureka
-      ZIPKIN_URL: http://zipkin:9411/api/v2/spans
-      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
-      JWT_SECRET: ${JWT_SECRET}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
-      REDIS_HOST: finsight-redis
-      REDIS_PORT: 6379
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      JWT_SECRET: ${JWT_SECRET:-FinsightAISecretKeyMustBeAtLeast32BytesLongForHS256AlgorithmSecurity}
     depends_on:
-      config-server:
-        condition: service_healthy
       discovery-server:
         condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 90s
-    restart: unless-stopped
-    mem_limit: 512m
-    cpus: "0.5"
+    networks:
+      - finsight-network
 
-  # ─────────────── Core Services ───────────────
   auth-service:
-    build:
-      context: .
-      dockerfile: auth-service/Dockerfile
-    container_name: finsight-auth-service
+    build: ./auth-service
+    container_name: auth-service
     ports:
       - "8081:8081"
     environment:
-      DB_HOST: finsight-postgres
-      DB_NAME: finsight_db
-      DB_USER: finsight_user
-      DB_PASSWORD: finsight_password
-      CONFIG_SERVER_URL: http://config-server:8888
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      EUREKA_URL: http://discovery-server:8761/eureka
-      ZIPKIN_URL: http://zipkin:9411/api/v2/spans
-      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
-      JWT_SECRET: ${JWT_SECRET}
-      REDIS_HOST: finsight-redis
-      REDIS_PORT: 6379
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auth_db
+      REDIS_HOST: redis
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      JWT_SECRET: ${JWT_SECRET:-FinsightAISecretKeyMustBeAtLeast32BytesLongForHS256AlgorithmSecurity}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      config-server:
-        condition: service_healthy
       discovery-server:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 90s
-    restart: unless-stopped
-    mem_limit: 512m
-    cpus: "0.5"
+    networks:
+      - finsight-network
 
   document-service:
-    build:
-      context: .
-      dockerfile: document-service/Dockerfile
-    container_name: finsight-document-service
+    build: ./document-service
+    container_name: document-service
     ports:
       - "8082:8082"
     environment:
-      DB_HOST: finsight-postgres
-      DB_NAME: finsight_db
-      DB_USER: finsight_user
-      DB_PASSWORD: finsight_password
-      CONFIG_SERVER_URL: http://config-server:8888
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      EUREKA_URL: http://discovery-server:8761/eureka
-      ZIPKIN_URL: http://zipkin:9411/api/v2/spans
-      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
-      # MinIO object storage — set MINIO_ENABLED=true to activate
-      MINIO_ENABLED: ${MINIO_ENABLED:-true}
-      MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
-      MINIO_BUCKET: ${MINIO_BUCKET:-finsight-documents}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/document_db
+      MINIO_URL: http://minio:9000
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
     depends_on:
       postgres:
         condition: service_healthy
-      config-server:
+      kafka:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
-      minio:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 90s
-    restart: unless-stopped
-    mem_limit: 768m
-    cpus: "0.5"
+    networks:
+      - finsight-network
 
   ai-service:
-    build:
-      context: .
-      dockerfile: ai-service/Dockerfile
-    container_name: finsight-ai-service
+    build: ./ai-service
+    container_name: ai-service
     ports:
       - "8083:8083"
     environment:
-      DB_HOST: finsight-postgres
-      DB_NAME: finsight_db
-      DB_USER: finsight_user
-      DB_PASSWORD: finsight_password
-      CONFIG_SERVER_URL: http://config-server:8888
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      EUREKA_URL: http://discovery-server:8761/eureka
-      ZIPKIN_URL: http://zipkin:9411/api/v2/spans
-      GROQ_API_KEY: ${GROQ_API_KEY:-${OPENAI_API_KEY:-}}
-      GROQ_BASE_URL: ${GROQ_BASE_URL:-https://api.groq.com/openai/v1}
-      GROQ_MODEL: ${GROQ_MODEL:-llama3-8b-8192}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
-      OPENAI_MODEL: ${OPENAI_MODEL:-llama3-8b-8192}
-      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ai_db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
     depends_on:
       postgres:
         condition: service_healthy
-      config-server:
+      kafka:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8083/actuator/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 90s
-    restart: unless-stopped
-    mem_limit: 768m
-    cpus: "0.75"
+    networks:
+      - finsight-network
 
   workflow-service:
-    build:
-      context: .
-      dockerfile: workflow-service/Dockerfile
-    container_name: finsight-workflow-service
+    build: ./workflow-service
+    container_name: workflow-service
     ports:
       - "8084:8084"
     environment:
-      DB_HOST: finsight-postgres
-      DB_NAME: finsight_db
-      DB_USER: finsight_user
-      DB_PASSWORD: finsight_password
-      CONFIG_SERVER_URL: http://config-server:8888
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      EUREKA_URL: http://discovery-server:8761/eureka
-      ZIPKIN_URL: http://zipkin:9411/api/v2/spans
-      DOCUMENT_SERVICE_URL: http://document-service:8082
-      AI_SERVICE_URL: http://ai-service:8083
-      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/workflow_db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
     depends_on:
       postgres:
         condition: service_healthy
-      config-server:
+      kafka:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
-      kafka:
-        condition: service_healthy
-      document-service:
-        condition: service_healthy
-      ai-service:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 120s
-    restart: unless-stopped
-    mem_limit: 640m
-    cpus: "0.5"
+    networks:
+      - finsight-network
 
   notification-service:
-    build:
-      context: .
-      dockerfile: notification-service/Dockerfile
-    container_name: finsight-notification-service
+    build: ./notification-service
+    container_name: notification-service
     ports:
       - "8085:8085"
     environment:
-      DB_HOST: finsight-postgres
-      DB_NAME: finsight_db
-      DB_USER: finsight_user
-      DB_PASSWORD: finsight_password
-      CONFIG_SERVER_URL: http://config-server:8888
-      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      EUREKA_URL: http://discovery-server:8761/eureka
-      ZIPKIN_URL: http://zipkin:9411/api/v2/spans
-      SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED: "false"
-      # Mailpit SMTP for local dev — override with real SMTP in prod
-      SMTP_HOST: ${SMTP_HOST:-mailpit}
-      SMTP_PORT: ${SMTP_PORT:-1025}
-      SMTP_USERNAME: ${SMTP_USERNAME:-}
-      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-      NOTIFICATION_FROM_ADDRESS: ${NOTIFICATION_FROM_ADDRESS:-noreply@finsight.ai}
-      NOTIFICATION_TO_ADDRESS: ${NOTIFICATION_TO_ADDRESS:-}
-      NOTIFICATION_WEBHOOK_URL: ${NOTIFICATION_WEBHOOK_URL:-}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notification_db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
     depends_on:
       postgres:
         condition: service_healthy
-      config-server:
+      kafka:
         condition: service_healthy
       discovery-server:
         condition: service_healthy
-      kafka:
-        condition: service_healthy
-      mailpit:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8085/actuator/health"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 90s
-    restart: unless-stopped
-    mem_limit: 512m
-    cpus: "0.25"
+    networks:
+      - finsight-network
 
-  # ─────────────── Frontend ───────────────
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    build: ./frontend
     container_name: finsight-frontend
     ports:
       - "3000:80"
-    environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
     depends_on:
-      api-gateway:
-        condition: service_healthy
-    restart: unless-stopped
-    mem_limit: 64m
-    cpus: "0.1"
+      - api-gateway
+    networks:
+      - finsight-network
+
+networks:
+  finsight-network:
+    driver: bridge
 
 volumes:
-  pgdata:
-  redisdata:
-  grafanadata:
-  miniodata:
-  prometheusdata:
+  postgres_data:
+  minio_data:

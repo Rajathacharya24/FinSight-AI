@@ -1,8 +1,6 @@
 package com.finsight.workflow.agent;
 
 import com.finsight.workflow.event.AIExtractionCompletedEvent;
-import lombok.Builder;
-import lombok.Data;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -10,11 +8,30 @@ import java.math.BigDecimal;
 @Component
 public class DecisionAgent {
 
-    @Data
-    @Builder
     public static class DecisionResult {
-        private String decision; // APPROVED, REJECTED, NEEDS_REVIEW
+        private String decision;
         private String reason;
+
+        public DecisionResult() {}
+        public DecisionResult(String decision, String reason) {
+            this.decision = decision;
+            this.reason = reason;
+        }
+
+        public String getDecision() { return decision; }
+        public void setDecision(String decision) { this.decision = decision; }
+        public String getReason() { return reason; }
+        public void setReason(String reason) { this.reason = reason; }
+
+        public static Builder builder() { return new Builder(); }
+
+        public static class Builder {
+            private String decision;
+            private String reason;
+            public Builder decision(String decision) { this.decision = decision; return this; }
+            public Builder reason(String reason) { this.reason = reason; return this; }
+            public DecisionResult build() { return new DecisionResult(decision, reason); }
+        }
     }
 
     public DecisionResult makeDecision(AIExtractionCompletedEvent event,

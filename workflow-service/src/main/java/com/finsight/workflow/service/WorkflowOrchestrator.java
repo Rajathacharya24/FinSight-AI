@@ -11,8 +11,8 @@ import com.finsight.workflow.event.WorkflowCompletedEvent;
 import com.finsight.workflow.repository.WorkflowAuditLogRepository;
 import com.finsight.workflow.repository.WorkflowInstanceRepository;
 import com.finsight.workflow.repository.WorkflowStepRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,10 +21,9 @@ import java.time.ZonedDateTime;
 import java.util.UUID;
 
 @Service
-@Slf4j
-@RequiredArgsConstructor
 public class WorkflowOrchestrator {
 
+    private static final Logger log = LoggerFactory.getLogger(WorkflowOrchestrator.class);
     private final DocumentAnalyzerAgent documentAnalyzerAgent;
     private final ComplianceAgent complianceAgent;
     private final DecisionAgent decisionAgent;
@@ -35,6 +34,22 @@ public class WorkflowOrchestrator {
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     private static final String TOPIC_WORKFLOW_COMPLETED = "workflow-completed-topic";
+
+    public WorkflowOrchestrator(DocumentAnalyzerAgent documentAnalyzerAgent,
+                                ComplianceAgent complianceAgent,
+                                DecisionAgent decisionAgent,
+                                WorkflowInstanceRepository instanceRepository,
+                                WorkflowStepRepository stepRepository,
+                                WorkflowAuditLogRepository auditLogRepository,
+                                KafkaTemplate<String, Object> kafkaTemplate) {
+        this.documentAnalyzerAgent = documentAnalyzerAgent;
+        this.complianceAgent = complianceAgent;
+        this.decisionAgent = decisionAgent;
+        this.instanceRepository = instanceRepository;
+        this.stepRepository = stepRepository;
+        this.auditLogRepository = auditLogRepository;
+        this.kafkaTemplate = kafkaTemplate;
+    }
 
     @Transactional
     public WorkflowInstance executeWorkflow(AIExtractionCompletedEvent event) {
@@ -118,7 +133,6 @@ public class WorkflowOrchestrator {
 
         createAuditLog(workflowId, "MANUAL_REVIEW", "Workflow manually " + newDecision.toLowerCase() + " by " + reviewer + ". Reason: " + reason, reviewer);
 
-        // Publish updated event
         WorkflowCompletedEvent completionEvent = WorkflowCompletedEvent.builder()
                 .workflowId(workflowId)
                 .documentId(instance.getDocumentId())

@@ -1,8 +1,6 @@
 package com.finsight.workflow.agent;
 
 import com.finsight.workflow.event.AIExtractionCompletedEvent;
-import lombok.Builder;
-import lombok.Data;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -10,12 +8,36 @@ import java.math.BigDecimal;
 @Component
 public class DocumentAnalyzerAgent {
 
-    @Data
-    @Builder
     public static class AnalysisResult {
         private boolean valid;
         private String details;
         private BigDecimal confidenceScore;
+
+        public AnalysisResult() {}
+        public AnalysisResult(boolean valid, String details, BigDecimal confidenceScore) {
+            this.valid = valid;
+            this.details = details;
+            this.confidenceScore = confidenceScore;
+        }
+
+        public boolean isValid() { return valid; }
+        public void setValid(boolean valid) { this.valid = valid; }
+        public String getDetails() { return details; }
+        public void setDetails(String details) { this.details = details; }
+        public BigDecimal getConfidenceScore() { return confidenceScore; }
+        public void setConfidenceScore(BigDecimal confidenceScore) { this.confidenceScore = confidenceScore; }
+
+        public static Builder builder() { return new Builder(); }
+
+        public static class Builder {
+            private boolean valid;
+            private String details;
+            private BigDecimal confidenceScore;
+            public Builder valid(boolean valid) { this.valid = valid; return this; }
+            public Builder details(String details) { this.details = details; return this; }
+            public Builder confidenceScore(BigDecimal confidenceScore) { this.confidenceScore = confidenceScore; return this; }
+            public AnalysisResult build() { return new AnalysisResult(valid, details, confidenceScore); }
+        }
     }
 
     public AnalysisResult analyze(AIExtractionCompletedEvent event) {

@@ -1,17 +1,20 @@
 package com.finsight.workflow.service;
 
 import com.finsight.workflow.event.AIExtractionCompletedEvent;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
 @Service
-@Slf4j
-@RequiredArgsConstructor
 public class WorkflowListener {
 
+    private static final Logger log = LoggerFactory.getLogger(WorkflowListener.class);
     private final WorkflowOrchestrator workflowOrchestrator;
+
+    public WorkflowListener(WorkflowOrchestrator workflowOrchestrator) {
+        this.workflowOrchestrator = workflowOrchestrator;
+    }
 
     @KafkaListener(topics = "ai-extraction-completed-topic", groupId = "workflow-service-group")
     public void handleAiExtractionCompleted(AIExtractionCompletedEvent event) {

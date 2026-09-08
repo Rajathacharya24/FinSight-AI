@@ -1,117 +1,104 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth.js';
+import React from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { 
+  FileText, 
+  GitMerge, 
+  Bot, 
+  BarChart3, 
+  Bell, 
+  LogOut, 
+  ShieldCheck,
+  Building2
+} from 'lucide-react';
 
-const NAV_LINKS = [
-  {
-    to: '/upload',
-    label: 'Upload',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-      </svg>
-    ),
-  },
-  {
-    to: '/documents',
-    label: 'Workflows',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    ),
-  },
-  {
-    to: '/analytics',
-    label: 'Analytics',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-      </svg>
-    ),
-  },
-  {
-    to: '/notifications',
-    label: 'Notifications',
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-      </svg>
-    ),
-  },
-];
-
-export default function Layout() {
-  const { logout } = useAuth();
+export const Layout = ({ children }) => {
+  const { user, logout } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
 
+  const navItems = [
+    { label: 'Documents', path: '/documents', icon: FileText },
+    { label: 'Workflows', path: '/workflows', icon: GitMerge },
+    { label: 'AI RAG Assistant', path: '/rag', icon: Bot },
+    { label: 'Analytics', path: '/analytics', icon: BarChart3 },
+    { label: 'Notifications', path: '/notifications', icon: Bell },
+  ];
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
-    <div className="min-h-screen flex animated-bg">
-      {/* Decorative glow blobs */}
-      <div className="glow-dot w-96 h-96 bg-brand-700/20 top-[-100px] left-[-80px]" style={{ position: 'fixed' }} />
-      <div className="glow-dot w-72 h-72 bg-navy-600/15 bottom-[-60px] right-[-40px]" style={{ position: 'fixed' }} />
-
-      {/* ── Sidebar ── */}
-      <aside className="relative z-10 w-64 flex flex-col flex-shrink-0 border-r border-white/8"
-             style={{ background: 'rgba(9,14,22,0.85)', backdropFilter: 'blur(20px)' }}>
-
-        {/* Logo */}
-        <div className="px-5 py-6 border-b border-white/8">
-          <div className="flex items-center gap-2.5">
-            {/* Icon */}
-            <div className="w-8 h-8 rounded-lg bg-gradient-brand flex items-center justify-center shadow-glow-brand">
-              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row">
+      {/* Sidebar Navigation */}
+      <aside className="w-full md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between p-4 shrink-0">
+        <div>
+          {/* Brand Logo */}
+          <div className="flex items-center space-x-3 px-2 py-4 mb-6 border-b border-slate-800">
+            <div className="p-2 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-500/30">
+              <Building2 className="w-6 h-6 text-white" />
             </div>
             <div>
-              <div className="text-white font-bold text-base leading-none">FinSight AI</div>
-              <div className="text-xs text-slate-500 mt-0.5 leading-none">Workflow Console</div>
+              <h1 className="font-bold text-lg text-white tracking-wide">FinSight AI</h1>
+              <p className="text-xs text-indigo-400 font-medium">Enterprise Intelligence</p>
             </div>
           </div>
+
+          {/* Navigation Links */}
+          <nav className="space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const active = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    active
+                      ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                  }`}
+                >
+                  <Icon className={`w-5 h-5 ${active ? 'text-indigo-400' : 'text-slate-400'}`} />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-600 px-3 mb-2">Navigation</p>
-          {NAV_LINKS.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              id={`nav-${link.label.toLowerCase()}`}
-              className={({ isActive }) =>
-                `nav-link ${isActive ? 'active' : ''}`
-              }
+        {/* User Card */}
+        <div className="pt-4 border-t border-slate-800">
+          <div className="flex items-center justify-between p-2 rounded-lg bg-slate-850">
+            <div className="flex items-center space-x-3 overflow-hidden">
+              <div className="w-9 h-9 rounded-full bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center font-bold text-indigo-300">
+                {user?.username ? user.username.charAt(0).toUpperCase() : 'D'}
+              </div>
+              <div className="truncate">
+                <p className="text-sm font-semibold text-white truncate">{user?.username || 'demo'}</p>
+                <p className="text-xs text-slate-400 flex items-center space-x-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 inline" />
+                  <span>{user?.roles?.[0] || 'USER'}</span>
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              title="Sign Out"
+              className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
             >
-              {link.icon}
-              {link.label}
-            </NavLink>
-          ))}
-        </nav>
-
-        {/* Bottom: status + sign out */}
-        <div className="p-3 border-t border-white/8 space-y-2">
-          {/* System status indicator */}
-          <div className="flex items-center gap-2 px-3 py-2">
-            <span className="w-2 h-2 rounded-full bg-success-400 animate-pulse" />
-            <span className="text-xs text-slate-500">System Online</span>
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
-          <button
-            id="btn-sign-out"
-            onClick={() => { logout(); navigate('/login'); }}
-            className="btn-ghost w-full text-slate-400"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            Sign out
-          </button>
         </div>
       </aside>
 
-      {/* ── Main content ── */}
-      <main className="relative z-10 flex-1 overflow-auto p-8">
-        <Outlet />
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+        {children}
       </main>
     </div>
   );
-}
+};

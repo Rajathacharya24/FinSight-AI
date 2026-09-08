@@ -8,7 +8,6 @@ import com.finsight.workflow.repository.WorkflowAuditLogRepository;
 import com.finsight.workflow.repository.WorkflowInstanceRepository;
 import com.finsight.workflow.service.WorkflowOrchestrator;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,12 +19,19 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/workflow")
-@RequiredArgsConstructor
 public class WorkflowController {
 
     private final WorkflowInstanceRepository instanceRepository;
     private final WorkflowAuditLogRepository auditLogRepository;
     private final WorkflowOrchestrator workflowOrchestrator;
+
+    public WorkflowController(WorkflowInstanceRepository instanceRepository,
+                              WorkflowAuditLogRepository auditLogRepository,
+                              WorkflowOrchestrator workflowOrchestrator) {
+        this.instanceRepository = instanceRepository;
+        this.auditLogRepository = auditLogRepository;
+        this.workflowOrchestrator = workflowOrchestrator;
+    }
 
     @GetMapping("/instances")
     public ResponseEntity<List<WorkflowInstance>> getAllWorkflows(
@@ -91,7 +97,7 @@ public class WorkflowController {
                 .needsReviewCount(needsReview)
                 .approvalRate(approvalRate)
                 .averageLoanAmount(avgLoan)
-                .averageProcessingTimeSeconds(1.42) // Average processing duration benchmark
+                .averageProcessingTimeSeconds(1.42)
                 .statusDistribution(statusDistribution)
                 .build();
 

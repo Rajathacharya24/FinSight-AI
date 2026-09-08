@@ -1,27 +1,26 @@
--- Enable pgvector extension (no-op if already created by Postgres init script)
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- Loan application extraction (deterministic regex extractor output)
-CREATE TABLE IF NOT EXISTS loan_application_extraction (
-    id              BIGSERIAL PRIMARY KEY,
-    document_id     BIGINT NOT NULL,
-    applicant_name  VARCHAR(255),
-    income          VARCHAR(64),
-    address         VARCHAR(512),
-    loan_amount     VARCHAR(64),
-    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS loan_application_extractions (
+    id BIGSERIAL PRIMARY KEY,
+    document_id VARCHAR(36) UNIQUE NOT NULL,
+    borrower_name VARCHAR(100),
+    loan_amount NUMERIC(15, 2),
+    annual_income NUMERIC(15, 2),
+    application_date VARCHAR(50),
+    loan_purpose VARCHAR(255),
+    employment_status VARCHAR(100),
+    confidence_score NUMERIC(5, 2),
+    raw_extraction_json TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_loan_application_extraction_document_id
-    ON loan_application_extraction(document_id);
-
--- Document chunk embeddings for RAG (Spring AI PgVectorStore-compatible)
-CREATE TABLE IF NOT EXISTS document_embedding (
-    id        UUID PRIMARY KEY,
-    content   TEXT,
-    metadata  JSONB,
-    embedding public.VECTOR(1536) -- text-embedding-3-small dimension
+CREATE TABLE IF NOT EXISTS document_chunks (
+    id BIGSERIAL PRIMARY KEY,
+    document_id VARCHAR(36) NOT NULL,
+    chunk_index INT NOT NULL,
+    chunk_text TEXT NOT NULL,
+    embedding vector(384),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS document_embedding_hnsw_idx
-    ON document_embedding USING hnsw (embedding public.vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS idx_doc_chunks_doc_id ON document_chunks(document_id);

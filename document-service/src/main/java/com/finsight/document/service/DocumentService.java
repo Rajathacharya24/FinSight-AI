@@ -5,8 +5,8 @@ import com.finsight.document.domain.DocumentContent;
 import com.finsight.document.event.DocumentUploadedEvent;
 import com.finsight.document.repository.DocumentContentRepository;
 import com.finsight.document.repository.DocumentRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,10 +17,9 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-@Slf4j
-@RequiredArgsConstructor
 public class DocumentService {
 
+    private static final Logger log = LoggerFactory.getLogger(DocumentService.class);
     private final DocumentRepository documentRepository;
     private final DocumentContentRepository documentContentRepository;
     private final MinioService minioService;
@@ -28,6 +27,18 @@ public class DocumentService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     private static final String TOPIC_DOCUMENT_UPLOADED = "document-uploaded-topic";
+
+    public DocumentService(DocumentRepository documentRepository,
+                           DocumentContentRepository documentContentRepository,
+                           MinioService minioService,
+                           PdfExtractionService pdfExtractionService,
+                           KafkaTemplate<String, Object> kafkaTemplate) {
+        this.documentRepository = documentRepository;
+        this.documentContentRepository = documentContentRepository;
+        this.minioService = minioService;
+        this.pdfExtractionService = pdfExtractionService;
+        this.kafkaTemplate = kafkaTemplate;
+    }
 
     @Transactional
     public Document uploadDocument(MultipartFile file, String userId, String correlationId) {
@@ -116,7 +127,6 @@ public class DocumentService {
         if (file.getOriginalFilename() == null || !file.getOriginalFilename().toLowerCase().endsWith(".pdf")) {
             throw new IllegalArgumentException("Only PDF files are supported");
         }
-        // Limit file size to 15MB
         if (file.getSize() > 15 * 1024 * 1024) {
             throw new IllegalArgumentException("File size exceeds maximum limit of 15MB");
         }

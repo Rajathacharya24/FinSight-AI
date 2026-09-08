@@ -1,18 +1,20 @@
 package com.finsight.auth.security;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 
 @Service
-@RequiredArgsConstructor
 public class RateLimitationService {
 
     private final StringRedisTemplate redisTemplate;
     private static final int MAX_ATTEMPTS = 5;
     private static final Duration BLOCK_TIME = Duration.ofMinutes(1);
+
+    public RateLimitationService(StringRedisTemplate redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
 
     public boolean isRateLimited(String key) {
         String redisKey = "rate_limit:" + key;

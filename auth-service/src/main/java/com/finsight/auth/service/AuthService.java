@@ -10,7 +10,6 @@ import com.finsight.auth.repository.RoleRepository;
 import com.finsight.auth.repository.UserRepository;
 import com.finsight.auth.security.JwtProvider;
 import com.finsight.auth.security.RateLimitationService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,7 +21,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -31,6 +29,20 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
     private final RateLimitationService rateLimitationService;
+
+    public AuthService(UserRepository userRepository,
+                       RoleRepository roleRepository,
+                       RefreshTokenRepository refreshTokenRepository,
+                       PasswordEncoder passwordEncoder,
+                       JwtProvider jwtProvider,
+                       RateLimitationService rateLimitationService) {
+        this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtProvider = jwtProvider;
+        this.rateLimitationService = rateLimitationService;
+    }
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -57,10 +69,10 @@ public class AuthService {
 
         userRepository.save(user);
 
-        return login(new LoginRequest() {{
-            setUsername(request.getUsername());
-            setPassword(request.getPassword());
-        }});
+        LoginRequest loginReq = new LoginRequest();
+        loginReq.setUsername(request.getUsername());
+        loginReq.setPassword(request.getPassword());
+        return login(loginReq);
     }
 
     @Transactional

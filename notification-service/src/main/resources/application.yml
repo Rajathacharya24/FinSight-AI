@@ -1,90 +1,55 @@
+server:
+  port: 8085
+
 spring:
-  cloud:
-    compatibility-verifier:
-      enabled: false
   application:
     name: notification-service
   config:
-    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
-
-
+    import: optional:configserver:http://localhost:8888
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:finsight_db}
-    username: ${DB_USER:finsight_user}
-    password: ${DB_PASSWORD:finsight_password}
-
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/notification_db}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: validate
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-
   flyway:
     enabled: true
     baseline-on-migrate: true
     locations: classpath:db/migration
-
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
-      group-id: notification-service
+      group-id: notification-service-group
       auto-offset-reset: earliest
-
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
   mail:
-    host: ${SMTP_HOST:}
-    port: ${SMTP_PORT:587}
-    username: ${SMTP_USERNAME:}
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:noreply@finsight.ai}
     password: ${SMTP_PASSWORD:}
-
-  # WebFlux for webhook dispatch (does not start a WebFlux server — we're in Web MVC mode)
-  webflux:
-    base-path: /
-
-server:
-  port: ${SERVER_PORT:8085}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
 
 eureka:
   client:
-    service-url:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka}
-  instance:
-    prefer-ip-address: true
+    serviceUrl:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus,loggers
-  endpoint:
-    health:
-      show-details: always
-      probes:
-        enabled: true
-  metrics:
-    tags:
-      application: ${spring.application.name}
-  tracing:
-    sampling:
-      probability: 1.0
-  zipkin:
-    tracing:
-      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
-
-notification:
-  from-address: ${NOTIFICATION_FROM_ADDRESS:noreply@finsight.ai}
-  to-address: ${NOTIFICATION_TO_ADDRESS:}
-  webhook-url: ${NOTIFICATION_WEBHOOK_URL:}
-
-springdoc:
-  swagger-ui:
-    path: /swagger-ui.html
-  api-docs:
-    path: /v3/api-docs
-
-logging:
-  pattern:
-    level: "%5p [${spring.application.name},%X{traceId:-},%X{spanId:-}]"
-  level:
-    com.finsight.notificationservice: INFO
-    root: INFO
+        include: health,info,metrics,prometheus

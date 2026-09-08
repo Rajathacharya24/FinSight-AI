@@ -4,7 +4,6 @@ import com.finsight.document.domain.Document;
 import com.finsight.document.domain.DocumentContent;
 import com.finsight.document.service.DocumentService;
 import com.finsight.document.service.MinioService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -17,11 +16,15 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/documents")
-@RequiredArgsConstructor
 public class DocumentController {
 
     private final DocumentService documentService;
     private final MinioService minioService;
+
+    public DocumentController(DocumentService documentService, MinioService minioService) {
+        this.documentService = documentService;
+        this.minioService = minioService;
+    }
 
     @PostMapping("/upload")
     public ResponseEntity<Document> uploadDocument(

@@ -4,17 +4,20 @@ import com.finsight.auth.dto.*;
 import com.finsight.auth.security.JwtProvider;
 import com.finsight.auth.service.AuthService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/auth")
-@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
     private final JwtProvider jwtProvider;
+
+    public AuthController(AuthService authService, JwtProvider jwtProvider) {
+        this.authService = authService;
+        this.jwtProvider = jwtProvider;
+    }
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {

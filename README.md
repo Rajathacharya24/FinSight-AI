@@ -154,11 +154,6 @@ Notification Service (Renders HTML Email & Sends to Mailpit SMTP)
 
 ---
 
-## 🧪 Testing
-
-```bash
-# Run unit & integration tests
-mvn test
 ```
 
 ---

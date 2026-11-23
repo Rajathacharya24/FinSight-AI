@@ -1,9 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import client from '../api/client';
-import { 
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts';
-import { BarChart3, TrendingUp, CheckCircle2, XCircle, AlertTriangle, DollarSign, Clock, ShieldCheck } from 'lucide-react';
+import { BarChart3, CheckCircle2, DollarSign, Clock, ShieldCheck, TrendingUp } from 'lucide-react';
+
+const TOOLTIP_STYLE = {
+  backgroundColor: '#0a1019',
+  borderColor: 'rgba(255,255,255,0.1)',
+  borderRadius: '12px',
+  fontSize: '12px',
+  color: '#e2e8f0',
+  boxShadow: '0 12px 32px -12px rgba(0,0,0,0.8)',
+};
+
+const MetricCard = ({ icon: Icon, label, value, tone, trend }) => (
+  <div className="panel panel-hover relative overflow-hidden p-5">
+    <div className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full blur-2xl ${tone.glow}`} />
+    <div className="relative flex items-center gap-4">
+      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border ${tone.tile}`}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold text-slate-400">{label}</p>
+        <h3 className="mt-0.5 truncate text-2xl font-extrabold tracking-tight text-white">{value}</h3>
+        {trend && (
+          <p className="mt-0.5 flex items-center gap-1 text-[10px] font-medium text-success-400">
+            <TrendingUp className="h-3 w-3" /> {trend}
+          </p>
+        )}
+      </div>
+    </div>
+  </div>
+);
 
 export const AnalyticsPage = () => {
   const [analytics, setAnalytics] = useState(null);
@@ -16,7 +54,7 @@ export const AnalyticsPage = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  const COLORS = ['#22c55e', '#ef4444', '#f59e0b', '#6366f1'];
+  const COLORS = ['#22c55e', '#ef4444', '#f59e0b'];
 
   const pieData = analytics ? [
     { name: 'Approved', value: analytics.approvedCount || 0 },
@@ -24,115 +62,141 @@ export const AnalyticsPage = () => {
     { name: 'Needs Review', value: analytics.needsReviewCount || 0 },
   ] : [];
 
+  const hasPieData = pieData.some((d) => d.value > 0);
+
   const barData = [
-    { month: 'Jan', volume: 12, avgLoan: 85000 },
-    { month: 'Feb', volume: 19, avgLoan: 92000 },
-    { month: 'Mar', volume: 27, avgLoan: 115000 },
-    { month: 'Apr', volume: 34, avgLoan: 105000 },
-    { month: 'May', volume: 45, avgLoan: 130000 },
-    { month: 'Jun', volume: analytics?.totalWorkflows || 52, avgLoan: analytics?.averageLoanAmount || 125000 },
+    { month: 'Jan', volume: 12 },
+    { month: 'Feb', volume: 19 },
+    { month: 'Mar', volume: 27 },
+    { month: 'Apr', volume: 34 },
+    { month: 'May', volume: 45 },
+    { month: 'Jun', volume: analytics?.totalWorkflows || 52 },
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <BarChart3 className="w-7 h-7 text-indigo-400" />
-          Executive Intelligence Analytics
-        </h1>
-        <p className="text-xs text-slate-400 mt-1">Real-time metrics on underwriting decisions, AI confidence, and workflow throughput</p>
+        <p className="eyebrow mb-1.5 flex items-center gap-1.5">
+          <BarChart3 className="h-3.5 w-3.5 text-brand-400" /> Executive intelligence
+        </p>
+        <h1 className="section-title">Analytics Overview</h1>
+        <p className="section-subtitle">
+          Real-time metrics on underwriting decisions, AI confidence and workflow throughput.
+        </p>
       </div>
 
-      {/* Metric Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 bg-slate-900/80 border border-slate-800 rounded-2xl shadow-xl flex items-center space-x-4">
-          <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
-            <CheckCircle2 className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-semibold">Approval Rate</p>
-            <h3 className="text-2xl font-extrabold text-white">{analytics?.approvalRate || 85.5}%</h3>
-          </div>
-        </div>
-
-        <div className="p-5 bg-slate-900/80 border border-slate-800 rounded-2xl shadow-xl flex items-center space-x-4">
-          <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400">
-            <DollarSign className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-semibold">Avg. Requested Loan</p>
-            <h3 className="text-2xl font-extrabold text-white">${(analytics?.averageLoanAmount || 125000).toLocaleString()}</h3>
-          </div>
-        </div>
-
-        <div className="p-5 bg-slate-900/80 border border-slate-800 rounded-2xl shadow-xl flex items-center space-x-4">
-          <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400">
-            <Clock className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-semibold">Avg. Processing Velocity</p>
-            <h3 className="text-2xl font-extrabold text-white">{analytics?.averageProcessingTimeSeconds || 1.42}s</h3>
-          </div>
-        </div>
-
-        <div className="p-5 bg-slate-900/80 border border-slate-800 rounded-2xl shadow-xl flex items-center space-x-4">
-          <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl text-purple-400">
-            <ShieldCheck className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-semibold">AI Extraction Confidence</p>
-            <h3 className="text-2xl font-extrabold text-white">94.8%</h3>
-          </div>
-        </div>
+      {/* Metrics */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard
+          icon={CheckCircle2}
+          label="Approval rate"
+          value={`${analytics?.approvalRate || 85.5}%`}
+          tone={{
+            tile: 'border-success-500/25 bg-success-500/10 text-success-400',
+            glow: 'bg-success-500/20',
+          }}
+          trend="+2.4% vs last month"
+        />
+        <MetricCard
+          icon={DollarSign}
+          label="Avg. requested loan"
+          value={`$${(analytics?.averageLoanAmount || 125000).toLocaleString()}`}
+          tone={{
+            tile: 'border-brand-400/25 bg-brand-500/10 text-brand-300',
+            glow: 'bg-brand-500/20',
+          }}
+        />
+        <MetricCard
+          icon={Clock}
+          label="Avg. processing velocity"
+          value={`${analytics?.averageProcessingTimeSeconds || 1.42}s`}
+          tone={{
+            tile: 'border-warning-500/25 bg-warning-500/10 text-warning-300',
+            glow: 'bg-warning-500/20',
+          }}
+        />
+        <MetricCard
+          icon={ShieldCheck}
+          label="AI extraction confidence"
+          value="94.8%"
+          tone={{
+            tile: 'border-accent-500/25 bg-accent-500/10 text-accent-300',
+            glow: 'bg-accent-500/20',
+          }}
+        />
       </div>
 
-      {/* Recharts Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Decision Distribution Donut Chart */}
-        <div className="p-6 bg-slate-900/80 border border-slate-800 rounded-2xl shadow-xl space-y-4">
-          <h3 className="text-sm font-bold text-white">Underwriting Decision Distribution</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '12px' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+      {/* Charts */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Decision distribution */}
+        <div className="panel p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-bold text-white">Decision distribution</h3>
+            <span className="chip border-white/[0.08] bg-white/[0.03] text-slate-400">
+              {loading ? 'Loading…' : 'All time'}
+            </span>
           </div>
-          <div className="flex justify-center space-x-6 text-xs text-slate-300">
-            <span className="flex items-center"><span className="w-3 h-3 rounded-full bg-emerald-500 mr-2" />Approved</span>
-            <span className="flex items-center"><span className="w-3 h-3 rounded-full bg-rose-500 mr-2" />Rejected</span>
-            <span className="flex items-center"><span className="w-3 h-3 rounded-full bg-amber-500 mr-2" />Needs Review</span>
+          <div className="h-64">
+            {hasPieData ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={62}
+                    outerRadius={92}
+                    paddingAngle={5}
+                    stroke="none"
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-xs text-slate-500">
+                No decision data available yet.
+              </div>
+            )}
+          </div>
+          <div className="flex justify-center gap-6 text-xs text-slate-300">
+            <span className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-success-500" /> Approved
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-danger-500" /> Rejected
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-warning-500" /> Needs review
+            </span>
           </div>
         </div>
 
-        {/* Workflow Volume Bar Chart */}
-        <div className="p-6 bg-slate-900/80 border border-slate-800 rounded-2xl shadow-xl space-y-4">
-          <h3 className="text-sm font-bold text-white">Monthly Loan Document Volume</h3>
+        {/* Monthly volume */}
+        <div className="panel p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-bold text-white">Monthly document volume</h3>
+            <span className="chip border-white/[0.08] bg-white/[0.03] text-slate-400">Last 6 months</span>
+          </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barData}>
-                <XAxis dataKey="month" stroke="#64748b" fontSize={11} />
-                <YAxis stroke="#64748b" fontSize={11} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '12px' }}
-                />
-                <Bar dataKey="volume" fill="#6366f1" radius={[6, 6, 0, 0]} />
+              <BarChart data={barData} barCategoryGap={28}>
+                <defs>
+                  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#9270ff" />
+                    <stop offset="100%" stopColor="#4a1cae" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis dataKey="month" stroke="#475569" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="#475569" fontSize={11} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                <Bar dataKey="volume" fill="url(#barGradient)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

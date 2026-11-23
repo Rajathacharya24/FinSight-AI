@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import client from '../api/client';
-import { Bell, Mail, CheckCircle2, AlertCircle, Eye, ExternalLink } from 'lucide-react';
+import { Bell, Mail, CheckCircle2, AlertCircle, Eye, ExternalLink, X, Loader2 } from 'lucide-react';
 
 export const NotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);
@@ -15,75 +15,99 @@ export const NotificationsPage = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Bell className="w-7 h-7 text-indigo-400" />
-            Email Notification Center
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">Audit log of customer decision emails dispatched via Mailpit SMTP server</p>
+          <p className="eyebrow mb-1.5 flex items-center gap-1.5">
+            <Bell className="h-3.5 w-3.5 text-brand-400" /> Communications
+          </p>
+          <h1 className="section-title">Email Notification Center</h1>
+          <p className="section-subtitle">
+            Audit log of customer decision emails dispatched via the Mailpit SMTP server.
+          </p>
         </div>
         <a
           href="http://localhost:8025"
           target="_blank"
           rel="noopener noreferrer"
-          className="px-3.5 py-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors"
+          className="btn-accent self-start sm:self-auto"
         >
           <span>Open Mailpit Web UI</span>
-          <ExternalLink className="w-3.5 h-3.5" />
+          <ExternalLink className="h-3.5 w-3.5" />
         </a>
       </div>
 
-      {/* Notifications Table */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+      {/* Table */}
+      <div className="table-shell">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 uppercase font-semibold">
+            <thead className="table-head">
               <tr>
-                <th className="p-4">Recipient</th>
-                <th className="p-4">Subject</th>
-                <th className="p-4">Workflow ID</th>
-                <th className="p-4">Status</th>
-                <th className="p-4">Sent At</th>
-                <th className="p-4 text-right">Actions</th>
+                <th className="p-4 font-semibold">Recipient</th>
+                <th className="p-4 font-semibold">Subject</th>
+                <th className="p-4 font-semibold">Workflow ID</th>
+                <th className="p-4 font-semibold">Status</th>
+                <th className="p-4 font-semibold">Sent At</th>
+                <th className="p-4 text-right font-semibold">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 text-slate-300">
+            <tbody className="divide-y divide-white/[0.04] text-slate-300">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="p-8 text-center text-slate-500">Loading notification history...</td>
+                  <td colSpan="6" className="p-10 text-center text-slate-500">
+                    <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-brand-400" />
+                    Loading notification history…
+                  </td>
                 </tr>
               ) : notifications.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="p-8 text-center text-slate-500">No notifications dispatched yet. Process a workflow to trigger emails.</td>
+                  <td colSpan="6" className="p-10 text-center text-slate-500">
+                    No notifications dispatched yet. Process a workflow to trigger emails.
+                  </td>
                 </tr>
               ) : (
                 notifications.map((notif) => (
-                  <tr key={notif.id} className="hover:bg-slate-850/50 transition-colors">
-                    <td className="p-4 font-semibold text-white flex items-center space-x-2">
-                      <Mail className="w-4 h-4 text-indigo-400" />
-                      <span>{notif.recipientEmail}</span>
+                  <tr key={notif.id} className="trow">
+                    <td className="p-4">
+                      <div className="flex items-center gap-2.5">
+                        <div className="icon-tile h-8 w-8 shrink-0 border-brand-400/20 bg-brand-500/10 text-brand-300">
+                          <Mail className="h-4 w-4" />
+                        </div>
+                        <span className="font-semibold text-white">{notif.recipientEmail}</span>
+                      </div>
                     </td>
                     <td className="p-4 text-slate-200">{notif.subject}</td>
-                    <td className="p-4 font-mono text-[11px] text-slate-400">{notif.workflowId.substring(0, 10)}...</td>
+                    <td className="p-4 font-mono text-[11px] text-slate-400">
+                      {notif.workflowId.substring(0, 10)}…
+                    </td>
                     <td className="p-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                        notif.status === 'SENT' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                      }`}>
+                      <span
+                        className={`chip ${
+                          notif.status === 'SENT'
+                            ? 'border-success-500/25 bg-success-500/10 text-success-400'
+                            : 'border-danger-500/25 bg-danger-500/10 text-danger-300'
+                        }`}
+                      >
+                        {notif.status === 'SENT' ? (
+                          <CheckCircle2 className="h-3 w-3" />
+                        ) : (
+                          <AlertCircle className="h-3 w-3" />
+                        )}
                         {notif.status}
                       </span>
                     </td>
                     <td className="p-4 text-slate-400">{new Date(notif.sentAt).toLocaleString()}</td>
-                    <td className="p-4 text-right">
-                      <button
-                        onClick={() => setSelectedNotif(notif)}
-                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-medium rounded-lg transition-colors inline-flex items-center space-x-1"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Preview HTML</span>
-                      </button>
+                    <td className="p-4">
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => setSelectedNotif(notif)}
+                          className="btn-ghost px-3 py-1.5 text-[11px]"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          <span>Preview HTML</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -93,23 +117,20 @@ export const NotificationsPage = () => {
         </div>
       </div>
 
-      {/* HTML Email Preview Modal */}
+      {/* Preview modal */}
       {selectedNotif && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl max-h-[80vh] flex flex-col shadow-2xl">
-            <div className="p-4 border-b border-slate-800 flex justify-between items-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[80vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-dark-850 shadow-glass">
+            <div className="flex items-center justify-between border-b border-white/[0.08] p-4">
               <div>
-                <h3 className="text-sm font-bold text-white">Email Preview</h3>
+                <h3 className="text-sm font-bold text-white">Email preview</h3>
                 <p className="text-[11px] text-slate-400">To: {selectedNotif.recipientEmail}</p>
               </div>
-              <button
-                onClick={() => setSelectedNotif(null)}
-                className="text-slate-400 hover:text-white text-xs px-2 py-1 bg-slate-800 rounded-lg"
-              >
-                Close
+              <button onClick={() => setSelectedNotif(null)} className="btn-icon">
+                <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="p-6 bg-white overflow-y-auto rounded-b-2xl">
+            <div className="overflow-y-auto bg-white p-6">
               <div dangerouslySetInnerHTML={{ __html: selectedNotif.message }} />
             </div>
           </div>

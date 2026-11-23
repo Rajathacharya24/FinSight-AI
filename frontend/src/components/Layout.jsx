@@ -1,29 +1,74 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { 
-  FileText, 
-  GitMerge, 
-  Bot, 
-  BarChart3, 
-  Bell, 
-  LogOut, 
+import {
+  FileText,
+  GitMerge,
+  Bot,
+  BarChart3,
+  Bell,
+  LogOut,
   ShieldCheck,
-  Building2
+  Building2,
+  Sparkles,
 } from 'lucide-react';
+
+const NAV_ITEMS = [
+  { label: 'Documents', path: '/documents', icon: FileText },
+  { label: 'Workflows', path: '/workflows', icon: GitMerge },
+  { label: 'AI RAG Assistant', path: '/rag', icon: Bot },
+  { label: 'Analytics', path: '/analytics', icon: BarChart3 },
+  { label: 'Notifications', path: '/notifications', icon: Bell },
+];
+
+const BrandMark = () => (
+  <div className="flex items-center gap-3">
+    <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-brand shadow-glow-brand">
+      <Building2 className="h-5 w-5 text-white" />
+      <span className="absolute inset-0 rounded-xl bg-glass-sheen" />
+    </div>
+    <div className="leading-tight">
+      <h1 className="text-base font-bold tracking-tight text-white">
+        FinSight <span className="text-gradient">AI</span>
+      </h1>
+      <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500">
+        Enterprise Intelligence
+      </p>
+    </div>
+  </div>
+);
+
+const NavLinks = ({ location, variant = 'sidebar' }) => (
+  <nav className={variant === 'sidebar' ? 'space-y-1' : 'flex items-center gap-1 overflow-x-auto'}>
+    {NAV_ITEMS.map((item) => {
+      const Icon = item.icon;
+      const active = location.pathname === item.path;
+      return (
+        <Link
+          key={item.path}
+          to={item.path}
+          className={
+            variant === 'sidebar'
+              ? `nav-link ${active ? 'active' : ''}`
+              : `flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
+                  active
+                    ? 'bg-gradient-brand-soft text-white'
+                    : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                }`
+          }
+        >
+          <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-brand-300' : 'text-slate-500'}`} />
+          <span className="whitespace-nowrap">{item.label}</span>
+        </Link>
+      );
+    })}
+  </nav>
+);
 
 export const Layout = ({ children }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-
-  const navItems = [
-    { label: 'Documents', path: '/documents', icon: FileText },
-    { label: 'Workflows', path: '/workflows', icon: GitMerge },
-    { label: 'AI RAG Assistant', path: '/rag', icon: Bot },
-    { label: 'Analytics', path: '/analytics', icon: BarChart3 },
-    { label: 'Notifications', path: '/notifications', icon: Bell },
-  ];
 
   const handleLogout = () => {
     logout();
@@ -31,74 +76,89 @@ export const Layout = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row">
-      {/* Sidebar Navigation */}
-      <aside className="w-full md:w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between p-4 shrink-0">
-        <div>
-          {/* Brand Logo */}
-          <div className="flex items-center space-x-3 px-2 py-4 mb-6 border-b border-slate-800">
-            <div className="p-2 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-500/30">
-              <Building2 className="w-6 h-6 text-white" />
+    <div className="relative min-h-screen text-slate-200">
+      {/* Ambient background */}
+      <div className="pointer-events-none fixed inset-0 -z-10 app-bg" />
+      <div className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[520px] app-grid" />
+      <div className="glow-dot -left-24 top-24 h-64 w-64 bg-brand-600/20" />
+
+      <div className="flex min-h-screen">
+        {/* ── Desktop sidebar ── */}
+        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col justify-between border-r border-white/[0.06] bg-dark-900/70 p-4 backdrop-blur-xl md:flex">
+          <div>
+            <div className="mb-8 rounded-2xl border border-white/[0.06] bg-white/[0.02] px-3 py-4">
+              <BrandMark />
             </div>
-            <div>
-              <h1 className="font-bold text-lg text-white tracking-wide">FinSight AI</h1>
-              <p className="text-xs text-indigo-400 font-medium">Enterprise Intelligence</p>
-            </div>
+
+            <p className="eyebrow mb-2 px-3">Workspace</p>
+            <NavLinks location={location} />
           </div>
 
-          {/* Navigation Links */}
-          <nav className="space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const active = location.pathname === item.path;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                    active
-                      ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                  }`}
+          <div className="space-y-3">
+            <div className="rounded-xl border border-brand-500/20 bg-gradient-brand-soft p-3">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold text-brand-200">
+                <Sparkles className="h-3.5 w-3.5" /> AI Pipeline Online
+              </p>
+              <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
+                Groq extraction, compliance rules & pgvector retrieval active.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.03] p-2.5">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-brand-400/30 bg-brand-500/20 text-sm font-bold text-brand-200">
+                  {user?.username ? user.username.charAt(0).toUpperCase() : 'D'}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-white">
+                    {user?.username || 'demo'}
+                  </p>
+                  <p className="flex items-center gap-1 text-[10px] text-slate-400">
+                    <ShieldCheck className="h-3 w-3 text-success-400" />
+                    {user?.roles?.[0] || 'USER'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                title="Sign out"
+                className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-danger-500/10 hover:text-danger-400"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        {/* ── Main column ── */}
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* Mobile header */}
+          <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-dark-900/80 backdrop-blur-xl md:hidden">
+            <div className="flex items-center justify-between px-4 py-3">
+              <BrandMark />
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full border border-brand-400/30 bg-brand-500/20 text-xs font-bold text-brand-200">
+                  {user?.username ? user.username.charAt(0).toUpperCase() : 'D'}
+                </div>
+                <button
+                  onClick={handleLogout}
+                  title="Sign out"
+                  className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-danger-500/10 hover:text-danger-400"
                 >
-                  <Icon className={`w-5 h-5 ${active ? 'text-indigo-400' : 'text-slate-400'}`} />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-
-        {/* User Card */}
-        <div className="pt-4 border-t border-slate-800">
-          <div className="flex items-center justify-between p-2 rounded-lg bg-slate-850">
-            <div className="flex items-center space-x-3 overflow-hidden">
-              <div className="w-9 h-9 rounded-full bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center font-bold text-indigo-300">
-                {user?.username ? user.username.charAt(0).toUpperCase() : 'D'}
-              </div>
-              <div className="truncate">
-                <p className="text-sm font-semibold text-white truncate">{user?.username || 'demo'}</p>
-                <p className="text-xs text-slate-400 flex items-center space-x-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 inline" />
-                  <span>{user?.roles?.[0] || 'USER'}</span>
-                </p>
+                  <LogOut className="h-4 w-4" />
+                </button>
               </div>
             </div>
-            <button
-              onClick={handleLogout}
-              title="Sign Out"
-              className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </aside>
+            <div className="border-t border-white/[0.05] px-3 py-2">
+              <NavLinks location={location} variant="mobile" />
+            </div>
+          </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-        {children}
-      </main>
+          <main className="flex-1 p-5 md:p-8 lg:p-10">
+            <div className="mx-auto w-full max-w-7xl">{children}</div>
+          </main>
+        </div>
+      </div>
     </div>
   );
 };

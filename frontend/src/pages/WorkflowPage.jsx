@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import client from '../api/client';
-import { 
-  GitMerge, 
-  CheckCircle2, 
-  XCircle, 
-  AlertTriangle, 
-  Clock, 
-  ShieldCheck, 
-  FileText, 
-  User, 
-  DollarSign, 
+import {
+  GitMerge,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Clock,
   Activity,
-  UserCheck
+  UserCheck,
+  Loader2,
+  X,
+  CircleDot,
 } from 'lucide-react';
 
 export const WorkflowPage = () => {
@@ -23,8 +22,7 @@ export const WorkflowPage = () => {
   const [selectedWorkflow, setSelectedWorkflow] = useState(null);
   const [auditLogs, setAuditLogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  // Review Modal State
+
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [reviewAction, setReviewAction] = useState('APPROVE');
   const [reviewReason, setReviewReason] = useState('');
@@ -79,13 +77,13 @@ export const WorkflowPage = () => {
     try {
       await client.post(`/workflow/instances/${selectedWorkflow.id}/review`, {
         action: reviewAction,
-        reason: reviewReason
+        reason: reviewReason,
       });
       setReviewModalOpen(false);
       setReviewReason('');
       fetchWorkflows();
     } catch (err) {
-      alert('Failed to submit manual review.');
+      console.error('Failed to submit manual review.', err);
     } finally {
       setSubmittingReview(false);
     }
@@ -95,205 +93,243 @@ export const WorkflowPage = () => {
     switch (status) {
       case 'APPROVED':
         return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-            <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Approved
+          <span className="chip border-success-500/25 bg-success-500/10 text-success-400">
+            <CheckCircle2 className="h-3 w-3" /> Approved
           </span>
         );
       case 'REJECTED':
         return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-400 border border-rose-500/30">
-            <XCircle className="w-3.5 h-3.5 mr-1.5" /> Rejected
+          <span className="chip border-danger-500/25 bg-danger-500/10 text-danger-300">
+            <XCircle className="h-3 w-3" /> Rejected
           </span>
         );
       case 'NEEDS_REVIEW':
         return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 animate-pulse">
-            <AlertTriangle className="w-3.5 h-3.5 mr-1.5" /> Underwriter Review
+          <span className="chip animate-pulse border-warning-500/25 bg-warning-500/10 text-warning-300">
+            <AlertTriangle className="h-3 w-3" /> Review
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">
-            <Clock className="w-3.5 h-3.5 mr-1.5" /> Processing...
+          <span className="chip border-brand-400/25 bg-brand-500/10 text-brand-300">
+            <Clock className="h-3 w-3" /> Processing
           </span>
         );
     }
   };
 
+  const stages = selectedWorkflow
+    ? [
+        { label: 'Uploaded', sub: 'MinIO + PDFBox' },
+        { label: 'AI Extraction', sub: 'Groq LLM DTO' },
+        { label: 'Compliance', sub: 'DTI & Rules' },
+        { label: 'Decision', sub: selectedWorkflow.status },
+        { label: 'Notification', sub: 'Mailpit SMTP' },
+      ]
+    : [];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <GitMerge className="w-7 h-7 text-indigo-400" />
-          Multi-Agent Workflow Tracker
-        </h1>
-        <p className="text-xs text-slate-400 mt-1">Real-time asynchronous compliance decision engine</p>
+        <p className="eyebrow mb-1.5 flex items-center gap-1.5">
+          <GitMerge className="h-3.5 w-3.5 text-brand-400" /> Orchestration
+        </p>
+        <h1 className="section-title">Multi-Agent Workflow Tracker</h1>
+        <p className="section-subtitle">Real-time asynchronous compliance decision engine.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Workflow List */}
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col h-[700px]">
-          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Workflow Instances</h2>
-          <div className="overflow-y-auto space-y-2 flex-1 pr-1">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Workflow list */}
+        <div className="panel flex h-[700px] flex-col p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="eyebrow">Workflow instances</h2>
+            <span className="chip border-white/[0.08] bg-white/[0.03] text-slate-400">
+              {workflows.length}
+            </span>
+          </div>
+          <div className="flex-1 space-y-2 overflow-y-auto pr-1">
             {loading ? (
-              <p className="text-xs text-slate-500 p-4 text-center">Loading workflows...</p>
+              <p className="flex items-center justify-center gap-2 p-6 text-xs text-slate-500">
+                <Loader2 className="h-4 w-4 animate-spin text-brand-400" /> Loading workflows…
+              </p>
             ) : workflows.length === 0 ? (
-              <p className="text-xs text-slate-500 p-4 text-center">No active workflows found.</p>
+              <p className="p-6 text-center text-xs text-slate-500">No active workflows found.</p>
             ) : (
-              workflows.map((wf) => (
-                <div
-                  key={wf.id}
-                  onClick={() => selectWorkflowItem(wf)}
-                  className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                    selectedWorkflow?.id === wf.id
-                      ? 'bg-indigo-600/15 border-indigo-500/50 shadow-md shadow-indigo-500/10'
-                      : 'bg-slate-950/60 border-slate-800/80 hover:bg-slate-850'
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-1.5">
-                    <p className="text-sm font-semibold text-white truncate max-w-[150px]">{wf.borrowerName || 'Applicant'}</p>
-                    {getStatusBadge(wf.status)}
-                  </div>
-                  <p className="text-xs text-slate-400 font-mono">Doc ID: {wf.documentId.substring(0, 10)}...</p>
-                  <div className="mt-2 text-[11px] text-slate-500 flex justify-between">
-                    <span>${wf.loanAmount?.toLocaleString()}</span>
-                    <span>{new Date(wf.startedAt).toLocaleTimeString()}</span>
-                  </div>
-                </div>
-              ))
+              workflows.map((wf) => {
+                const active = selectedWorkflow?.id === wf.id;
+                return (
+                  <button
+                    key={wf.id}
+                    onClick={() => selectWorkflowItem(wf)}
+                    className={`w-full rounded-xl border p-3.5 text-left transition-all duration-200 ${
+                      active
+                        ? 'border-brand-400/40 bg-gradient-brand-soft shadow-inset-line'
+                        : 'border-white/[0.06] bg-dark-950/40 hover:border-white/[0.14] hover:bg-dark-900/60'
+                    }`}
+                  >
+                    <div className="mb-1.5 flex items-start justify-between gap-2">
+                      <p className="max-w-[150px] truncate text-sm font-semibold text-white">
+                        {wf.borrowerName || 'Applicant'}
+                      </p>
+                      {getStatusBadge(wf.status)}
+                    </div>
+                    <p className="font-mono text-[11px] text-slate-500">
+                      Doc ID: {wf.documentId.substring(0, 10)}…
+                    </p>
+                    <div className="mt-2 flex justify-between text-[11px] text-slate-500">
+                      <span className="font-medium text-slate-300">
+                        ${wf.loanAmount?.toLocaleString()}
+                      </span>
+                      <span>{new Date(wf.startedAt).toLocaleTimeString()}</span>
+                    </div>
+                  </button>
+                );
+              })
             )}
           </div>
         </div>
 
-        {/* Right Column: Workflow Stage Visualization & Audit Log */}
+        {/* Detail column */}
         {selectedWorkflow ? (
-          <div className="lg:col-span-2 space-y-6">
-            {/* Active Workflow Card */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl">
-              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 pb-4 border-b border-slate-800">
+          <div className="space-y-6 lg:col-span-2">
+            <div className="panel p-6">
+              <div className="flex flex-col justify-between gap-4 border-b border-white/[0.07] pb-4 sm:flex-row sm:items-center">
                 <div>
-                  <h3 className="text-lg font-bold text-white">{selectedWorkflow.borrowerName || 'Applicant'}</h3>
-                  <p className="text-xs text-slate-400">Workflow ID: <span className="font-mono text-slate-300">{selectedWorkflow.id}</span></p>
+                  <h3 className="text-lg font-bold text-white">
+                    {selectedWorkflow.borrowerName || 'Applicant'}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Workflow ID:{' '}
+                    <span className="font-mono text-slate-300">{selectedWorkflow.id}</span>
+                  </p>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center gap-3">
                   {getStatusBadge(selectedWorkflow.status)}
                   {selectedWorkflow.status === 'NEEDS_REVIEW' && (
                     <button
                       onClick={() => setReviewModalOpen(true)}
-                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg shadow-md transition-colors flex items-center gap-1"
+                      className="btn-primary px-3.5 py-1.5 text-xs"
                     >
-                      <UserCheck className="w-3.5 h-3.5" /> Manual Override
+                      <UserCheck className="h-3.5 w-3.5" /> Manual override
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Workflow Pipeline Progression Bar */}
+              {/* Pipeline */}
               <div className="my-6">
-                <p className="text-xs font-semibold text-slate-400 mb-4">Pipeline Execution Stage</p>
-                <div className="grid grid-cols-5 gap-2 text-center text-xs">
-                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl">
-                    <p className="font-bold">✓ Uploaded</p>
-                    <p className="text-[10px] text-slate-400 mt-1">MinIO + PDFBox</p>
-                  </div>
-                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl">
-                    <p className="font-bold">✓ AI Extraction</p>
-                    <p className="text-[10px] text-slate-400 mt-1">Groq LLM DTO</p>
-                  </div>
-                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl">
-                    <p className="font-bold">✓ Compliance</p>
-                    <p className="text-[10px] text-slate-400 mt-1">DTI & Rules</p>
-                  </div>
-                  <div className={`p-3 rounded-xl border ${
-                    selectedWorkflow.status === 'APPROVED' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
-                    selectedWorkflow.status === 'REJECTED' ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-                  }`}>
-                    <p className="font-bold">Decision</p>
-                    <p className="text-[10px] text-slate-400 mt-1">{selectedWorkflow.status}</p>
-                  </div>
-                  <div className="p-3 bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 rounded-xl">
-                    <p className="font-bold">✓ Notification</p>
-                    <p className="text-[10px] text-slate-400 mt-1">Mailpit SMTP</p>
-                  </div>
+                <p className="eyebrow mb-4">Pipeline execution stage</p>
+                <div className="grid grid-cols-2 gap-2 text-center text-xs sm:grid-cols-5">
+                  {stages.map((stage, i) => {
+                    const isDecision = i === 3;
+                    const tone = !isDecision
+                      ? 'border-success-500/25 bg-success-500/[0.08] text-success-400'
+                      : selectedWorkflow.status === 'APPROVED'
+                      ? 'border-success-500/25 bg-success-500/[0.08] text-success-400'
+                      : selectedWorkflow.status === 'REJECTED'
+                      ? 'border-danger-500/25 bg-danger-500/[0.08] text-danger-300'
+                      : 'border-warning-500/25 bg-warning-500/[0.08] text-warning-300';
+                    return (
+                      <div key={stage.label} className={`rounded-xl border p-3 ${tone}`}>
+                        <p className="font-bold">
+                          {!isDecision && '✓ '}
+                          {stage.label}
+                        </p>
+                        <p className="mt-1 text-[10px] text-slate-400">{stage.sub}</p>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Rationale Details */}
-              <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl">
-                <p className="text-xs font-semibold text-slate-400 mb-1">Decision Rationale</p>
-                <p className="text-xs text-slate-200">{selectedWorkflow.decisionReason || 'Processing decision...'}</p>
+              <div className="panel-inset p-4">
+                <p className="eyebrow mb-1">Decision rationale</p>
+                <p className="text-xs leading-relaxed text-slate-200">
+                  {selectedWorkflow.decisionReason || 'Processing decision…'}
+                </p>
               </div>
             </div>
 
-            {/* Audit Trail Component */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl">
-              <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-                <Activity className="w-4 h-4 text-indigo-400" /> Audit Log Timeline
+            {/* Audit trail */}
+            <div className="panel p-6">
+              <h3 className="mb-4 flex items-center gap-2 text-sm font-bold text-white">
+                <Activity className="h-4 w-4 text-brand-400" /> Audit log timeline
               </h3>
-              <div className="space-y-4 relative before:absolute before:inset-0 before:left-3.5 before:w-0.5 before:bg-slate-800">
-                {auditLogs.map((log) => (
-                  <div key={log.id} className="relative pl-8 flex items-start justify-between text-xs">
-                    <div className="absolute left-1.5 top-1 w-4 h-4 rounded-full bg-indigo-600 border-2 border-slate-900" />
-                    <div>
-                      <p className="font-bold text-slate-200">{log.action}</p>
-                      <p className="text-slate-400 mt-0.5">{log.description}</p>
-                      <p className="text-[10px] text-indigo-400 mt-1">Agent: {log.performedBy}</p>
+              {auditLogs.length === 0 ? (
+                <p className="text-xs text-slate-500">No audit events recorded yet.</p>
+              ) : (
+                <div className="relative space-y-4 before:absolute before:inset-0 before:left-[7px] before:w-px before:bg-white/[0.08]">
+                  {auditLogs.map((log) => (
+                    <div key={log.id} className="relative flex items-start justify-between gap-3 pl-7 text-xs">
+                      <span className="absolute left-0 top-1 flex h-4 w-4 items-center justify-center rounded-full border border-brand-400/40 bg-brand-500/20">
+                        <CircleDot className="h-2.5 w-2.5 text-brand-300" />
+                      </span>
+                      <div>
+                        <p className="font-bold text-slate-200">{log.action}</p>
+                        <p className="mt-0.5 text-slate-400">{log.description}</p>
+                        <p className="mt-1 text-[10px] text-brand-300">Agent: {log.performedBy}</p>
+                      </div>
+                      <span className="shrink-0 text-[10px] text-slate-500">
+                        {new Date(log.timestamp).toLocaleTimeString()}
+                      </span>
                     </div>
-                    <span className="text-[10px] text-slate-500 shrink-0">{new Date(log.timestamp).toLocaleTimeString()}</span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ) : (
-          <div className="lg:col-span-2 bg-slate-900/40 border border-slate-800 rounded-2xl p-8 text-center text-slate-500 flex items-center justify-center">
+          <div className="panel flex items-center justify-center p-8 text-center text-sm text-slate-500 lg:col-span-2">
             Select a workflow to view its pipeline execution and audit log.
           </div>
         )}
       </div>
 
-      {/* Underwriter Manual Override Modal */}
+      {/* Review modal */}
       {reviewModalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-white">Manual Underwriter Decision</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md space-y-4 rounded-2xl border border-white/10 bg-dark-850 p-6 shadow-glass">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-white">Manual underwriter decision</h3>
+              <button onClick={() => setReviewModalOpen(false)} className="btn-icon">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
             <form onSubmit={handleReviewSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Decision</label>
+                <label className="mb-1 block text-[11px] font-semibold text-slate-300">Decision</label>
                 <select
                   value={reviewAction}
                   onChange={(e) => setReviewAction(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white"
+                  className="form-select"
                 >
-                  <option value="APPROVE">Override & Approve</option>
-                  <option value="REJECT">Override & Reject</option>
+                  <option value="APPROVE">Override &amp; approve</option>
+                  <option value="REJECT">Override &amp; reject</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Underwriter Reason</label>
+                <label className="mb-1 block text-[11px] font-semibold text-slate-300">
+                  Underwriter reason
+                </label>
                 <textarea
                   value={reviewReason}
                   onChange={(e) => setReviewReason(e.target.value)}
-                  placeholder="Provide audit reason for manual override..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white h-24"
+                  placeholder="Provide an audit reason for the manual override…"
+                  className="form-input h-24 resize-none text-xs"
                   required
                 />
               </div>
-              <div className="flex justify-end space-x-2 pt-2">
+              <div className="flex justify-end gap-2 pt-1">
                 <button
                   type="button"
                   onClick={() => setReviewModalOpen(false)}
-                  className="px-4 py-2 bg-slate-800 text-slate-300 text-xs font-semibold rounded-xl"
+                  className="btn-ghost px-4 py-2 text-xs"
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  disabled={submittingReview}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl"
-                >
-                  Submit Decision
+                <button type="submit" disabled={submittingReview} className="btn-primary px-4 py-2 text-xs">
+                  {submittingReview ? 'Submitting…' : 'Submit decision'}
                 </button>
               </div>
             </form>

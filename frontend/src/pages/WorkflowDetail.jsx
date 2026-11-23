@@ -31,7 +31,7 @@ function StepTimeline({ currentStep, status }) {
                 done       ? 'bg-success-500 text-white shadow-glow-success' :
                 isFailed   ? 'bg-danger-500 text-white shadow-glow-danger' :
                 active     ? 'bg-gradient-brand text-white shadow-glow-brand animate-pulse-brand' :
-                             'bg-white/8 text-slate-600'
+                             'bg-white/[0.06] text-slate-600'
               }`}>
                 {done ? '✓' : isFailed ? '✕' : i + 1}
               </div>
@@ -46,7 +46,7 @@ function StepTimeline({ currentStep, status }) {
             </div>
             {i < STEPS_ORDER.length - 1 && (
               <div className={`flex-1 h-px mx-2 mt-[-16px] transition-all duration-700 ${
-                done ? 'bg-success-500/50' : 'bg-white/8'
+                done ? 'bg-success-500/50' : 'bg-white/[0.06]'
               }`} />
             )}
           </div>
@@ -66,7 +66,7 @@ function ConfidenceBar({ score, label }) {
         <span className="text-slate-400">{label || 'AI Confidence'}</span>
         <span className="font-semibold text-white">{pct}%</span>
       </div>
-      <div className="w-full h-2 bg-white/8 rounded-full overflow-hidden">
+      <div className="w-full h-2 bg-white/[0.06] rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-1000 ${color}`}
           style={{ width: `${pct}%` }}
@@ -104,14 +104,14 @@ function ReviewPanel({ workflowId, onReviewed }) {
 
   return (
     <div className="glass-card-solid p-5 space-y-4 border border-brand-500/25">
-      <h2 className="text-sm font-semibold text-white">📋 Review Decision</h2>
+      <h2 className="text-sm font-semibold text-white">Review Decision</h2>
       <div className="grid grid-cols-3 gap-2">
         {Object.entries(actionConfig).map(([key, { label, cls }]) => (
           <button
             key={key}
             onClick={() => setAction(key)}
             className={`py-2 rounded-lg text-xs font-bold transition-all ${
-              action === key ? cls : 'bg-white/8 text-slate-400 hover:bg-white/12'
+              action === key ? cls : 'bg-white/[0.06] text-slate-400 hover:bg-white/[0.12]'
             }`}
           >
             {label}
@@ -123,7 +123,7 @@ function ReviewPanel({ workflowId, onReviewed }) {
         onChange={e => setReason(e.target.value)}
         placeholder="Enter reasoning for this decision (required)…"
         rows={3}
-        className="w-full bg-white/6 border border-white/12 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500/50 resize-none"
+        className="w-full bg-white/[0.06] border border-white/[0.12] rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500/50 resize-none"
       />
       {error && <p className="text-xs text-danger-300">{error}</p>}
       <button
@@ -257,7 +257,7 @@ export default function WorkflowDetail() {
               ['Employment',       extraction.employmentStatus],
               ['Existing Debts',   extraction.existingDebts ? `$${parseInt(extraction.existingDebts).toLocaleString()}` : null],
             ].map(([label, val]) => val ? (
-              <div key={label} className="bg-white/4 rounded-xl p-3">
+              <div key={label} className="bg-white/[0.04] rounded-xl p-3">
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-[10px] text-slate-500 uppercase tracking-wider">{label}</p>
                   {extraction.fieldConfidenceScores?.[label.toLowerCase().replace(' ', '')] != null && (

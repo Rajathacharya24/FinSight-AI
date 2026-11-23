@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import client from '../api/client';
-import { Bot, Send, FileText, Sparkles, Database, ArrowRight } from 'lucide-react';
+import { Bot, Send, FileText, Sparkles, Database, Loader2 } from 'lucide-react';
 
 export const RagQueryPage = () => {
   const [documents, setDocuments] = useState([]);
@@ -51,74 +51,90 @@ export const RagQueryPage = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="mx-auto max-w-5xl space-y-6 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-          <Bot className="w-7 h-7 text-indigo-400" />
-          RAG Vector Intelligence Assistant
-        </h1>
-        <p className="text-xs text-slate-400 mt-1">Semantic search & context-augmented document Q&A powered by pgvector & Spring AI</p>
+        <p className="eyebrow mb-1.5 flex items-center gap-1.5">
+          <Bot className="h-3.5 w-3.5 text-brand-400" /> Retrieval augmented generation
+        </p>
+        <h1 className="section-title">RAG Vector Intelligence Assistant</h1>
+        <p className="section-subtitle">
+          Semantic search and context-augmented document Q&amp;A powered by pgvector and Spring AI.
+        </p>
       </div>
 
-      {/* Document Selector Header */}
-      <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-indigo-600/20 border border-indigo-500/30 rounded-xl text-indigo-400">
-            <FileText className="w-5 h-5" />
+      {/* Document selector */}
+      <div className="panel flex flex-col items-stretch justify-between gap-4 p-4 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-3">
+          <div className="icon-tile h-10 w-10 border-brand-400/20 bg-brand-500/10 text-brand-300">
+            <FileText className="h-5 w-5" />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-slate-300">Target Document for Query</label>
+            <label className="block text-xs font-semibold text-slate-200">Target document</label>
             <p className="text-[11px] text-slate-500">Vector embeddings generated and stored in pgvector</p>
           </div>
         </div>
         <select
           value={selectedDocId}
           onChange={(e) => setSelectedDocId(e.target.value)}
-          className="w-full sm:w-72 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+          className="form-select sm:w-72"
         >
           {documents.map((doc) => (
             <option key={doc.id} value={doc.id}>
-              {doc.fileName} ({doc.id.substring(0, 8)}...)
+              {doc.fileName} ({doc.id.substring(0, 8)}…)
             </option>
           ))}
         </select>
       </div>
 
-      {/* Chat Conversation Box */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 h-[500px] flex flex-col justify-between shadow-2xl">
-        <div className="overflow-y-auto space-y-4 pr-2 flex-1">
+      {/* Chat */}
+      <div className="panel flex h-[540px] flex-col justify-between p-5 shadow-glass">
+        <div className="flex-1 space-y-4 overflow-y-auto pr-2">
           {chatHistory.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center p-8 text-slate-500">
-              <Sparkles className="w-10 h-10 text-indigo-500/40 mb-3 animate-pulse" />
-              <p className="text-sm font-semibold text-slate-400">Ask any question about the selected document</p>
-              <p className="text-xs text-slate-500 mt-1 max-w-sm">
-                Example: "What is the borrower's annual income and requested loan amount?" or "Are there compliance risk factors?"
+            <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-brand-400/25 bg-brand-500/10">
+                <Sparkles className="h-6 w-6 animate-pulse text-brand-300" />
+              </div>
+              <p className="text-sm font-semibold text-slate-200">Ask anything about the selected document</p>
+              <p className="mt-1 max-w-sm text-xs leading-relaxed text-slate-500">
+                Example: “What is the borrower's annual income and requested loan amount?” or
+                “Are there compliance risk factors?”
               </p>
             </div>
           ) : (
             chatHistory.map((item, idx) => (
-              <div key={idx} className={`flex flex-col ${item.sender === 'user' ? 'items-end' : 'items-start'}`}>
+              <div
+                key={idx}
+                className={`flex flex-col ${item.sender === 'user' ? 'items-end' : 'items-start'}`}
+              >
+                {item.sender === 'ai' && (
+                  <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-brand-300">
+                    <Bot className="h-3 w-3" /> FinSight AI
+                  </div>
+                )}
                 <div
-                  className={`max-w-2xl rounded-2xl p-4 text-xs leading-relaxed ${
+                  className={`max-w-2xl rounded-2xl px-4 py-3 text-xs leading-relaxed ${
                     item.sender === 'user'
-                      ? 'bg-indigo-600 text-white rounded-br-none shadow-lg shadow-indigo-600/20'
-                      : 'bg-slate-950 border border-slate-800 text-slate-200 rounded-bl-none shadow-md'
+                      ? 'rounded-br-md bg-gradient-brand text-white shadow-glow-brand'
+                      : 'rounded-bl-md border border-white/[0.08] bg-dark-950/70 text-slate-200'
                   }`}
                 >
                   {item.sender === 'user' ? (
                     <p>{item.text}</p>
                   ) : (
                     <div>
-                      <p className="font-medium whitespace-pre-wrap">{item.answer}</p>
+                      <p className="whitespace-pre-wrap font-medium">{item.answer}</p>
                       {item.sources && item.sources.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-slate-800/80">
-                          <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1 flex items-center gap-1">
-                            <Database className="w-3 h-3" /> pgvector Context Chunks
+                        <div className="mt-3 border-t border-white/[0.08] pt-3">
+                          <p className="mb-1.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-brand-300">
+                            <Database className="h-3 w-3" /> pgvector context chunks
                           </p>
                           <div className="space-y-1">
                             {item.sources.map((src, sIdx) => (
-                              <p key={sIdx} className="text-[10px] text-slate-400 bg-slate-900 p-1.5 rounded border border-slate-800 truncate">
+                              <p
+                                key={sIdx}
+                                className="truncate rounded-md border border-white/[0.06] bg-dark-900/80 p-1.5 text-[10px] text-slate-400"
+                              >
                                 {src}
                               </p>
                             ))}
@@ -131,30 +147,31 @@ export const RagQueryPage = () => {
               </div>
             ))
           )}
+
           {loading && (
-            <div className="flex items-center space-x-2 text-xs text-indigo-400 p-2">
-              <Sparkles className="w-4 h-4 animate-spin" />
-              <span>Retrieving vector embeddings & executing Groq LLM RAG prompt...</span>
+            <div className="flex items-center gap-2 rounded-xl border border-brand-400/20 bg-brand-500/[0.06] p-3 text-xs text-brand-300">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Retrieving vector embeddings and executing the Groq LLM RAG prompt…</span>
             </div>
           )}
         </div>
 
-        {/* Input Form */}
-        <form onSubmit={handleQuery} className="mt-4 pt-4 border-t border-slate-800 flex gap-2">
+        {/* Composer */}
+        <form onSubmit={handleQuery} className="mt-4 flex gap-2 border-t border-white/[0.08] pt-4">
           <input
             type="text"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Ask a question about loan terms, borrower income, compliance..."
-            className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-indigo-500"
+            placeholder="Ask a question about loan terms, borrower income, compliance…"
+            className="form-input flex-1 text-xs"
           />
           <button
             type="submit"
             disabled={loading || !question.trim()}
-            className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-indigo-600/30 flex items-center space-x-1 disabled:opacity-50 transition-all"
+            className="btn-primary px-5 py-2.5 text-xs"
           >
             <span>Ask RAG</span>
-            <Send className="w-3.5 h-3.5" />
+            <Send className="h-3.5 w-3.5" />
           </button>
         </form>
       </div>

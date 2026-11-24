@@ -1,167 +1,201 @@
 package com.finsight.authservice.service;
 
-import com.finsight.authservice.config.JwtUtils;
-import com.finsight.authservice.dto.JwtResponse;
-import com.finsight.authservice.dto.LoginRequest;
-import com.finsight.authservice.dto.RegisterRequest;
-import com.finsight.authservice.exception.TokenRefreshException;
-import com.finsight.authservice.exception.UserAlreadyExistsException;
-import com.finsight.authservice.model.ERole;
-import com.finsight.authservice.model.RefreshToken;
-import com.finsight.authservice.model.User;
-import com.finsight.authservice.repository.UserRepository;
+import com.finsight.auth.domain.RefreshToken;
+import com.finsight.auth.domain.Role;
+import com.finsight.auth.domain.User;
+import com.finsight.auth.dto.AuthResponse;
+import com.finsight.auth.dto.LoginRequest;
+import com.finsight.auth.dto.RefreshTokenRequest;
+import com.finsight.auth.dto.RegisterRequest;
+import com.finsight.auth.exception.AuthException;
+import com.finsight.auth.repository.RefreshTokenRepository;
+import com.finsight.auth.repository.RoleRepository;
+import com.finsight.auth.repository.UserRepository;
+import com.finsight.auth.security.JwtProvider;
+import com.finsight.auth.security.RateLimitationService;
+import com.finsight.auth.service.AuthService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Instant;
-import java.util.Optional;
-import java.util.Collection;
 import java.util.List;
-import org.springframework.security.core.GrantedAuthority;
+import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
     @Mock private UserRepository userRepository;
+    @Mock private RoleRepository roleRepository;
+    @Mock private RefreshTokenRepository refreshTokenRepository;
     @Mock private PasswordEncoder passwordEncoder;
-    @Mock private JwtUtils jwtUtils;
-    @Mock private AuthenticationManager authenticationManager;
-    @Mock private RefreshTokenService refreshTokenService;
-    @Mock private Authentication authentication;
+    @Mock private JwtProvider jwtProvider;
+    @Mock private RateLimitationService rateLimitationService;
 
     private AuthService authService;
 
     @BeforeEach
-    void setUp() throws Exception {
-        authService = new AuthService();
-        inject(authService, "userRepository", userRepository);
-        inject(authService, "passwordEncoder", passwordEncoder);
-        inject(authService, "jwtUtils", jwtUtils);
-        inject(authService, "authenticationManager", authenticationManager);
-        inject(authService, "refreshTokenService", refreshTokenService);
+    void setUp() {
+        authService = new AuthService(userRepository, roleRepository, refreshTokenRepository,
+                passwordEncoder, jwtProvider, rateLimitationService);
     }
 
-    private void inject(Object target, String fieldName, Object value) throws Exception {
-        var field = target.getClass().getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(target, value);
+    private User demoUser() {
+        Role role = new Role(1L, "ROLE_USER");
+        User user = User.builder()
+                .id(1L)
+                .username("demo")
+                .email("demo@finsight.ai")
+                .password("encoded")
+                .enabled(true)
+                .roles(Set.of(role))
+                .build();
+        return user;
+    }
+
+    private void stubSuccessfulLogin(User user) {
+        when(rateLimitationService.isRateLimited(anyString())).thenReturn(false);
+        when(userRepository.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
+        when(jwtProvider.generateToken(anyString(), anyLong(), anyList())).thenReturn("access-token");
+        when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(invocation -> {
+            RefreshToken token = invocation.getArgument(0);
+            token.setToken("refresh-token");
+            return token;
+        });
     }
 
     @Test
-    void register_shouldCreateUser() {
-        RegisterRequest req = new RegisterRequest();
-        req.setUsername("testuser");
-        req.setEmail("test@email.com");
-        req.setPassword("password123");
+    void register_shouldCreateUserAndReturnTokens() {
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername("demo");
+        request.setEmail("demo@finsight.ai");
+        request.setPassword("demo123");
+        request.setFirstName("Demo");
+        request.setLastName("User");
 
-        when(userRepository.existsByUsername("testuser")).thenReturn(false);
-        when(userRepository.existsByEmail("test@email.com")).thenReturn(false);
-        when(passwordEncoder.encode("password123")).thenReturn("encoded");
-        when(userRepository.save(any())).thenAnswer(i -> {
-            User u = i.getArgument(0);
-            u.setId(1L);
-            return u;
-        });
+        User user = demoUser();
 
-        User result = authService.register(req);
+        when(userRepository.existsByUsername("demo")).thenReturn(false);
+        when(userRepository.existsByEmail("demo@finsight.ai")).thenReturn(false);
+        when(roleRepository.findByName("ROLE_USER")).thenReturn(Optional.of(new Role(1L, "ROLE_USER")));
+        when(passwordEncoder.encode("demo123")).thenReturn("encoded");
+        when(userRepository.save(any(User.class))).thenReturn(user);
+        stubSuccessfulLogin(user);
 
-        assertThat(result.getId()).isEqualTo(1L);
-        assertThat(result.getUsername()).isEqualTo("testuser");
-        assertThat(result.getRole()).isEqualTo(ERole.ROLE_APPLICANT);
-        verify(userRepository).save(any());
+        AuthResponse response = authService.register(request);
+
+        assertThat(response.getAccessToken()).isEqualTo("access-token");
+        assertThat(response.getRefreshToken()).isEqualTo("refresh-token");
+        assertThat(response.getUsername()).isEqualTo("demo");
+        assertThat(response.getRoles()).contains("ROLE_USER");
+        verify(userRepository).save(any(User.class));
     }
 
     @Test
     void register_shouldThrowWhenUsernameTaken() {
-        RegisterRequest req = new RegisterRequest();
-        req.setUsername("existing");
-        req.setEmail("e@e.com");
-        req.setPassword("pass");
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername("existing");
+        request.setEmail("existing@email.com");
+        request.setPassword("password123");
 
         when(userRepository.existsByUsername("existing")).thenReturn(true);
 
-        assertThatThrownBy(() -> authService.register(req))
-                .isInstanceOf(UserAlreadyExistsException.class)
+        assertThatThrownBy(() -> authService.register(request))
+                .isInstanceOf(AuthException.class)
                 .hasMessageContaining("already taken");
+
+        verify(userRepository, never()).save(any(User.class));
     }
 
     @Test
     void register_shouldThrowWhenEmailTaken() {
-        RegisterRequest req = new RegisterRequest();
-        req.setUsername("newuser");
-        req.setEmail("taken@email.com");
-        req.setPassword("pass");
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername("newuser");
+        request.setEmail("taken@email.com");
+        request.setPassword("password123");
 
         when(userRepository.existsByUsername("newuser")).thenReturn(false);
         when(userRepository.existsByEmail("taken@email.com")).thenReturn(true);
 
-        assertThatThrownBy(() -> authService.register(req))
-                .isInstanceOf(UserAlreadyExistsException.class)
+        assertThatThrownBy(() -> authService.register(request))
+                .isInstanceOf(AuthException.class)
                 .hasMessageContaining("already in use");
     }
 
     @Test
     void login_shouldReturnTokens() {
-        LoginRequest req = new LoginRequest();
-        req.setUsername("demo");
-        req.setPassword("demo123");
+        User user = demoUser();
+        stubSuccessfulLogin(user);
 
-        UserDetailsImpl userDetails = mock(UserDetailsImpl.class);
-        when(userDetails.getId()).thenReturn(1L);
-        when(userDetails.getUsername()).thenReturn("demo");
-        when(userDetails.getEmail()).thenReturn("demo@finsight.ai");
-        when(userDetails.getAuthorities()).thenReturn((Collection) List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
-
-        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-                .thenReturn(authentication);
-        when(authentication.getPrincipal()).thenReturn(userDetails);
-        when(jwtUtils.generateJwtToken(authentication)).thenReturn("access-token");
-
-        RefreshToken rt = new RefreshToken();
-        rt.setToken("refresh-token");
-        when(refreshTokenService.createRefreshToken(1L)).thenReturn(rt);
-
-        JwtResponse response = authService.login(req);
+        LoginRequest request = new LoginRequest("demo", "demo123");
+        AuthResponse response = authService.login(request);
 
         assertThat(response.getAccessToken()).isEqualTo("access-token");
         assertThat(response.getRefreshToken()).isEqualTo("refresh-token");
         assertThat(response.getUsername()).isEqualTo("demo");
-        assertThat(response.getRole()).isEqualTo("ROLE_ADMIN");
+        assertThat(response.getRoles()).containsExactly("ROLE_USER");
+        verify(rateLimitationService).resetAttempt("demo");
+    }
+
+    @Test
+    void login_shouldRejectBadPasswordAndTrackAttempt() {
+        User user = demoUser();
+        when(rateLimitationService.isRateLimited("demo")).thenReturn(false);
+        when(userRepository.findByUsername("demo")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong", "encoded")).thenReturn(false);
+
+        LoginRequest request = new LoginRequest("demo", "wrong");
+
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(AuthException.class)
+                .extracting("status")
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        verify(rateLimitationService).incrementAttempt("demo");
+    }
+
+    @Test
+    void login_shouldRejectWhenRateLimited() {
+        when(rateLimitationService.isRateLimited("demo")).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.login(new LoginRequest("demo", "demo123")))
+                .isInstanceOf(AuthException.class)
+                .extracting("status")
+                .isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+
+        verify(userRepository, never()).findByUsername(anyString());
     }
 
     @Test
     void refreshToken_shouldReturnNewAccessToken() {
-        User user = new User();
-        user.setId(1L);
-        user.setUsername("demo");
-        user.setEmail("demo@finsight.ai");
-        user.setPassword("encoded");
-        user.setRole(ERole.ROLE_APPLICANT);
+        User user = demoUser();
+        RefreshToken refreshToken = RefreshToken.builder()
+                .user(user)
+                .token("valid-refresh-token")
+                .expiryDate(Instant.now().plusSeconds(3600))
+                .revoked(false)
+                .build();
 
-        RefreshToken rt = new RefreshToken();
-        rt.setToken("valid-refresh-token");
-        rt.setUserId(user.getId());
-        rt.setExpiryDate(Instant.now().plusSeconds(3600));
+        when(refreshTokenRepository.findByToken("valid-refresh-token")).thenReturn(Optional.of(refreshToken));
+        when(jwtProvider.generateToken(anyString(), anyLong(), anyList())).thenReturn("new-access-token");
 
-        when(refreshTokenService.findByToken("valid-refresh-token")).thenReturn(Optional.of(rt));
-        when(refreshTokenService.verifyExpiration(rt)).thenReturn(rt);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(jwtUtils.generateJwtToken(any())).thenReturn("new-access-token");
-
-        JwtResponse response = authService.refreshToken("valid-refresh-token");
+        AuthResponse response = authService.refreshToken(refreshTokenRequest("valid-refresh-token"));
 
         assertThat(response.getAccessToken()).isEqualTo("new-access-token");
         assertThat(response.getRefreshToken()).isEqualTo("valid-refresh-token");
@@ -170,10 +204,28 @@ class AuthServiceTest {
 
     @Test
     void refreshToken_shouldThrowWhenNotFound() {
-        when(refreshTokenService.findByToken("invalid")).thenReturn(Optional.empty());
+        when(refreshTokenRepository.findByToken("invalid")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> authService.refreshToken("invalid"))
-                .isInstanceOf(TokenRefreshException.class)
-                .hasMessageContaining("not found");
+        assertThatThrownBy(() -> authService.refreshToken(refreshTokenRequest("invalid")))
+                .isInstanceOf(AuthException.class)
+                .hasMessageContaining("Invalid refresh token");
+    }
+
+    @Test
+    void refreshToken_shouldDeleteAndThrowWhenExpired() {
+        RefreshToken refreshToken = RefreshToken.builder()
+                .user(demoUser())
+                .token("expired")
+                .expiryDate(Instant.now().minusSeconds(60))
+                .revoked(false)
+                .build();
+
+        when(refreshTokenRepository.findByToken("expired")).thenReturn(Optional.of(refreshToken));
+
+        assertThatThrownBy(() -> authService.refreshToken(refreshTokenRequest("expired")))
+                .isInstanceOf(AuthException.class)
+                .hasMessageContaining("expired or revoked");
+
+        verify(refreshTokenRepository).delete(refreshToken);
     }
 }

@@ -68,6 +68,12 @@ class AuthServiceTest {
         return user;
     }
 
+    private RefreshTokenRequest refreshTokenRequest(String token) {
+        RefreshTokenRequest request = new RefreshTokenRequest();
+        request.setRefreshToken(token);
+        return request;
+    }
+
     private void stubSuccessfulLogin(User user) {
         when(rateLimitationService.isRateLimited(anyString())).thenReturn(false);
         when(userRepository.findByUsername(user.getUsername())).thenReturn(Optional.of(user));
@@ -163,9 +169,8 @@ class AuthServiceTest {
         LoginRequest request = new LoginRequest("demo", "wrong");
 
         assertThatThrownBy(() -> authService.login(request))
-                .isInstanceOf(AuthException.class)
-                .extracting("status")
-                .isEqualTo(HttpStatus.UNAUTHORIZED);
+                .isInstanceOfSatisfying(AuthException.class,
+                        ex -> assertThat(ex.getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
 
         verify(rateLimitationService).incrementAttempt("demo");
     }
@@ -175,9 +180,8 @@ class AuthServiceTest {
         when(rateLimitationService.isRateLimited("demo")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.login(new LoginRequest("demo", "demo123")))
-                .isInstanceOf(AuthException.class)
-                .extracting("status")
-                .isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+                .isInstanceOfSatisfying(AuthException.class,
+                        ex -> assertThat(ex.getStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS));
 
         verify(userRepository, never()).findByUsername(anyString());
     }

@@ -1,128 +1,107 @@
 package com.finsight.authservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.finsight.authservice.dto.LoginRequest;
-import com.finsight.authservice.dto.RegisterRequest;
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
+import com.finsight.auth.controller.AuthController;
+import com.finsight.auth.dto.AuthResponse;
+import com.finsight.auth.dto.LoginRequest;
+import com.finsight.auth.dto.RegisterRequest;
+import com.finsight.auth.dto.UserDto;
+import com.finsight.auth.exception.AuthException;
+import com.finsight.auth.exception.GlobalExceptionHandler;
+import com.finsight.auth.security.JwtProvider;
+import com.finsight.auth.service.AuthService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import com.finsight.authservice.model.RefreshToken;
-import com.finsight.authservice.repository.RefreshTokenRepository;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
-import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
-import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.connection.RedisServerCommands;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@TestPropertySource(properties = {
-        "spring.datasource.url=jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;INIT=CREATE SCHEMA IF NOT EXISTS auth",
-        "spring.datasource.driverClassName=org.h2.Driver",
-        "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-        "spring.flyway.enabled=false",
-        "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.cloud.config.enabled=false",
-        "spring.cloud.compatibility-verifier.enabled=false",
-        "eureka.client.enabled=false",
-        "management.tracing.enabled=false",
-        "management.health.redis.enabled=false",
-        "app.jwt.secret=test-secret-that-is-long-enough-for-hmac-sha256",
-        "app.jwt.expiration-ms=3600000",
-        "app.jwt.refresh-expiration-ms=604800000"
-})
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class AuthControllerIntegrationTest {
 
-    @TestConfiguration
-    static class TestRedisConfig {
-        @Bean
-        @Primary
-        public RedisConnectionFactory redisConnectionFactory() {
-            RedisConnectionFactory factory = mock(RedisConnectionFactory.class);
-            RedisConnection connection = mock(RedisConnection.class);
-            RedisServerCommands serverCommands = mock(RedisServerCommands.class);
-            when(serverCommands.getConfig(any())).thenReturn(new java.util.Properties());
-            when(connection.serverCommands()).thenReturn(serverCommands);
-            when(factory.getConnection()).thenReturn(connection);
-            return factory;
-        }
-
-        @Bean
-        @Primary
-        public ReactiveRedisConnectionFactory reactiveRedisConnectionFactory() {
-            return mock(ReactiveRedisConnectionFactory.class);
-        }
-    }
-
-    @Autowired
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private AuthService authService;
+    private JwtProvider jwtProvider;
     private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @BeforeEach
+    void setUp() {
+        authService = mock(AuthService.class);
+        jwtProvider = mock(JwtProvider.class);
+        mockMvc = MockMvcBuilders
+                .standaloneSetup(new AuthController(authService, jwtProvider))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+    }
 
-    @MockBean
-    private RefreshTokenRepository refreshTokenRepository;
-
-    @Test
-    @Order(1)
-    void register_shouldCreateUser() throws Exception {
-        RegisterRequest req = new RegisterRequest();
-        req.setUsername("newuser");
-        req.setEmail("new@user.com");
-        req.setPassword("password123");
-
-        mockMvc.perform(post("/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.message").value("User 'newuser' registered successfully."));
+    private AuthResponse response(String username) {
+        return AuthResponse.builder()
+                .accessToken("access-token")
+                .refreshToken("refresh-token")
+                .tokenType("Bearer")
+                .id(1L)
+                .username(username)
+                .email(username + "@finsight.ai")
+                .roles(Set.of("ROLE_USER"))
+                .build();
     }
 
     @Test
-    @Order(2)
+    void register_shouldReturnTokens() throws Exception {
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername("newuser");
+        request.setEmail("new@user.com");
+        request.setPassword("password123");
+
+        when(authService.register(any(RegisterRequest.class))).thenReturn(response("newuser"));
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("access-token"))
+                .andExpect(jsonPath("$.refreshToken").value("refresh-token"))
+                .andExpect(jsonPath("$.username").value("newuser"))
+                .andExpect(jsonPath("$.roles[0]").value("ROLE_USER"));
+    }
+
+    @Test
     void register_shouldRejectDuplicateUsername() throws Exception {
-        RegisterRequest req = new RegisterRequest();
-        req.setUsername("newuser");
-        req.setEmail("other@user.com");
-        req.setPassword("password123");
+        RegisterRequest request = new RegisterRequest();
+        request.setUsername("newuser");
+        request.setEmail("other@user.com");
+        request.setPassword("password123");
 
-        mockMvc.perform(post("/auth/register")
+        when(authService.register(any(RegisterRequest.class)))
+                .thenThrow(new AuthException("Username is already taken!", HttpStatus.CONFLICT));
+
+        mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isConflict());
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Username is already taken!"));
     }
 
     @Test
-    @Order(3)
     void login_shouldReturnTokens() throws Exception {
-        when(refreshTokenRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        LoginRequest request = new LoginRequest("newuser", "password123");
 
-        LoginRequest req = new LoginRequest();
-        req.setUsername("newuser");
-        req.setPassword("password123");
+        when(authService.login(any(LoginRequest.class))).thenReturn(response("newuser"));
 
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").exists())
                 .andExpect(jsonPath("$.refreshToken").exists())
@@ -130,20 +109,36 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
-    @Order(4)
     void login_shouldRejectBadCredentials() throws Exception {
-        LoginRequest req = new LoginRequest();
-        req.setUsername("newuser");
-        req.setPassword("wrongpassword");
+        LoginRequest request = new LoginRequest("newuser", "wrongpassword");
 
-        mockMvc.perform(post("/auth/login")
+        when(authService.login(any(LoginRequest.class)))
+                .thenThrow(new AuthException("Invalid username or password", HttpStatus.UNAUTHORIZED));
+
+        mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isUnauthorized());
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Invalid username or password"));
     }
 
     @Test
-    void health_shouldReturnOk() throws Exception {
-        mockMvc.perform(post("/auth/health"));
+    void me_shouldReturnCurrentUser() throws Exception {
+        UserDto user = UserDto.builder()
+                .id(1L)
+                .username("demo")
+                .email("demo@finsight.ai")
+                .enabled(true)
+                .roles(Set.of("ROLE_USER"))
+                .build();
+
+        when(jwtProvider.getUsernameFromToken(anyString())).thenReturn("demo");
+        when(authService.getCurrentUser("demo")).thenReturn(user);
+
+        mockMvc.perform(get("/api/v1/auth/me")
+                        .header("Authorization", "Bearer access-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("demo"))
+                .andExpect(jsonPath("$.email").value("demo@finsight.ai"));
     }
 }
